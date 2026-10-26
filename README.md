@@ -15,14 +15,26 @@ This repository supersedes the standalone installation test. It contains cloud-c
 ## GPS privacy behavior
 The first time an ACTIVE, LINKED employee opens the app, it shows a clear description and **Allow Location Access** button. The browser/phone then asks for explicit consent; the website cannot grant itself permission. A fresh GPS position is collected ONLY when the employee taps Check In / Check Out. HR/Admin can view that snapshot, the server timestamp, and its reported accuracy. There is no continuous background tracking, no watchPosition, and no location history collection outside attendance actions. Without GPS permission or if reported accuracy exceeds 1 km, attendance submission is rejected; a controlled manual correction workflow remains to be developed. Phone/browser GPS coordinates can be spoofed, so this is not guaranteed proof of physical presence.
 
-## Important: Backend activation is NOT finished
-The connected Supabase account currently has ZERO projects. The Supabase Project URL and public publishable key in config.js are placeholders. This site will show a configuration screen, NOT a fake or local test dashboard, until the database is created and securely configured.
+## Supabase project CREATED and core database activated (26 Oct 2026)
+- Project name: Prime HR Next Level
+- Project reference: qkhcojaouueypkgrzlov
+- Region: ap-south-1
+- Status: ACTIVE_HEALTHY at setup
+- schema.sql applied as migration: prime_hr_next_level_initial_schema
+- Extra foreign-key indexes applied as migration: prime_hr_foreign_key_indexes
+- Frontend config.js now points to this project using a PUBLIC publishable key.
+- RLS enabled on all 13 application tables and 31 policies added.
+- Database starts with zero registered accounts and no private staff records.
+- No FIRST ADMIN registered/approved yet; production readiness and company-wide rollout still pending.
+
+## Important: Backend activation is not FULLY finished
+The Supabase project and initial schema are now online, and config.js contains the correct public project URL and publishable key. The website can display a login/signup screen once Netlify deploys the GitHub changes. No administrator has been registered or approved. Real employee access and data collection must wait for testing, privacy/retention safeguards and company authorization.
 
 Deployment checklist:
-1. Select the Supabase organisation, review project cost, and create a company-approved project.
+1. DONE: organisation project created ($0/month quoted for initial Free Plan), schema applied and public connection configured.
 2. Verify privacy notice, location consent, HR access scope, data retention/deletion period and applicable employment obligations.
-3. In a fresh project, review/apply schema.sql with SQL Editor/migration. Check Supabase security advisors and RLS with at least two staff users and separate HR/Admin users.
-4. Put only the Supabase PROJECT URL and PUBLISHABLE key in config.js. NEVER upload secret/service_role keys, DB passwords or employee files to a public repository.
+3. DONE: schema applied. NEXT: perform RLS integration checks with at least two separate staff users and separate HR/Admin accounts.
+4. DONE: public Supabase project URL and publishable key configured in config.js. NEVER upload secret/service_role keys, DB passwords or employee files to a public repository.
 5. Configure email verification, secure SMTP, proper site URLs, MFA for admins and backup/incident response.
 6. Create/verify first administrator's account and authorize it in Supabase SQL Editor using a company-approved verified email:
 
