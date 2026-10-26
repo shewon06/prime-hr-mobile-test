@@ -306,7 +306,7 @@
   }
   function renderAccounts() {
     if(!isAdmin())return;
-    $("account-rows").innerHTML=state.profiles.map(p=>{
+    $("account-rows").innerHTML=state.profiles.filter(p=>p.role!=="employee"||!String(p.email).endsWith("@employees.primehr.example.com")).map(p=>{
       const self=p.id===state.user.id;
       const roles=['employee','hr','admin'].map(r=>'<option value="'+r+'" '+(p.role===r?'selected':'')+'>'+r+'</option>').join("");
       const action=self?'Your account':'<button class="btn tiny '+(p.is_active?'danger':'primary')+'" data-account-id="'+esc(p.id)+'" data-account-active="'+(!p.is_active)+'">'+(p.is_active?'Disable':'Approve')+'</button>';
