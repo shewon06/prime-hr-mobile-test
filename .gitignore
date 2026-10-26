@@ -1,0 +1,11 @@
+# Local Cloudflare build artifacts and private data
+dist/
+node_modules/
+.env
+.env.*
+*.local
+*.sqlite
+*.db
+*.bak
+*_ONE_TIME_CREDENTIALS.csv
+*.secrets
