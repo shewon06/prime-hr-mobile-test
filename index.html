@@ -49,6 +49,20 @@ dialog{border:0;border-radius:18px;padding:22px;width:calc(100% - 32px);max-widt
 .toast{display:none;position:fixed;z-index:70;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(430px,calc(100% - 35px));background:#163f32;color:white;padding:13px 15px;border-radius:12px;text-align:center;font-size:12px;box-shadow:0 6px 25px #11311d35}
 .toast.show{display:block}
 @media(min-width:500px){body{padding:20px 0}.shell{border-radius:25px;overflow:hidden;min-height:calc(100dvh - 40px)}.bottomnav{bottom:0;border-radius:16px 16px 0 0}}
+
+/* Easy-install CTA: the main action is the largest button on the home screen */
+.installhero{display:block;background:linear-gradient(145deg,#eaf6ed,#f8fbf3);border:1.5px solid #b3d5ba;padding:19px 16px 14px;border-radius:19px;box-shadow:0 4px 16px #13472d0b}
+.installtop{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.installemoji{font-size:29px;flex:0 0 auto;display:grid;place-items:center;width:50px;height:50px;background:#d7ecdd;border-radius:13px}
+.installtop b{font-size:15px;color:#164936;letter-spacing:-.2px}
+.installtop small{font-size:12px;color:#547b60;line-height:1.5;margin-top:5px}
+.install-action{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;padding:14px 16px;background:#17603e;color:white;border:0;border-radius:13px;font-size:16px;font-weight:850;box-shadow:0 5px 15px #184f3330;letter-spacing:.1px}
+.install-action:active{transform:scale(.99)}.install-action:disabled{opacity:.73;cursor:default}
+.install-hint{color:#557f65!important;text-align:center!important;font-size:11.5px!important;margin:10px 4px 0!important;line-height:1.5!important}
+.installhero.installed{background:#e6f5e9;border-color:#9acbaa}
+.installhero.installed .install-action{background:#e0eee4;color:#316347;box-shadow:none}
+.installhero.installed .installtop b{color:#266745}
+
 </style></head><body>
 <div class="shell">
  <header class="top">
@@ -58,7 +72,11 @@ dialog{border:0;border-radius:18px;padding:22px;width:calc(100% - 32px);max-widt
  <main class="container">
  <section id="home" class="view active">
    <div class="note"><span>🧪</span><div><b>Installation test only</b>Dummy employee account. Nothing connects to the company HR database. Demo actions are saved only on this phone.</div></div>
-   <div class="installstrip"><span>📲</span><div style="flex:1"><b>Install PRIME HR Test</b><small>Phone Home Screen එකට දාගෙන බලන්න</small></div><button id="installBtn" type="button">Install</button></div>
+   <div class="installstrip installhero" id="installPanel">
+     <div class="installtop"><span class="installemoji" aria-hidden="true">📲</span><div><b>PRIME HR App එක Install කරන්න</b><small>Phone එකේ Home Screen එකට පහසුවෙන්</small></div></div>
+     <button id="installBtn" type="button" class="install-action">⬇ Install PRIME HR App</button>
+     <p class="install-hint" id="installHint">Button එක ඔබලා app එක install කරගන්න.</p>
+   </div>
    <div class="grid2"><div class="stat"><span class="ic">🕘</span><div><b id="homeStatus">Not checked in</b><small style="display:block;margin-top:5px">Today's attendance</small></div></div><div class="stat"><span class="ic">📅</span><div><b id="homeLeave">0 requests</b><small style="display:block;margin-top:5px">Demo leave requests</small></div></div></div>
    <article class="card"><div class="section-head"><h2>Today's attendance</h2><span id="todayLabel"></span></div>
     <div class="row" style="margin:18px 0"><div><div class="attime" id="timeNow">--:--</div><small class="muted">Sri Lanka time</small></div><span class="datebadge" id="attendanceBadge">Not checked in</span></div>
@@ -154,19 +172,80 @@ $("leaveForm").addEventListener("submit",e=>{
 $("ackBtn").addEventListener("click",()=>{data.ack=true;save();render();notify("Notice acknowledged (demo only).")});
 $("resetDemo").addEventListener("click",()=>{if(!confirm("Remove all local demo check-ins and requests?"))return;data=fresh();save();render();notify("Demo data reset.")});
 setInterval(()=>{$("timeNow").textContent=clock(new Date().toISOString())},30000);
+// A native installation prompt is available only on supported browsers (typically Android Chromium).
+// iOS does not permit websites to install directly; one tap shows precise, short instructions.
 let installPrompt=null;
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;$("installBtn").textContent="Install";});
-window.addEventListener("appinstalled",()=>{installPrompt=null;$("installBtn").textContent="Installed";notify("Installed! Open PRIME HR Test from your Home Screen.")});
+let installInProgress=false;
 const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
-const isiOS=/iPhone|iPad|iPod/i.test(navigator.userAgent);
-if(standalone){$("installBtn").textContent="Installed";}
-$("installBtn").addEventListener("click",async()=>{
-  if(standalone){notify("Already running as installed app.");return}
-  if(installPrompt){const prompt=installPrompt;installPrompt=null;await prompt.prompt();const choice=await prompt.userChoice;if(choice.outcome==="accepted")notify("App added. Look for the HR icon.");else notify("You can install later from the browser menu.");return;}
-  $("installSteps").innerHTML=isiOS?
-    '<p><b>iPhone / Safari</b></p><ol><li>Open this page in Safari.</li><li>Tap the Share icon.</li><li>Choose Add to Home Screen.</li><li>Keep Open as Web App enabled; tap Add.</li></ol>':
-    '<p><b>Android / Chrome</b></p><ol><li>Open this page in Google Chrome.</li><li>Tap the three-dot menu ⋮.</li><li>Choose Install app or Add to Home screen.</li><li>Confirm Install / Add.</li></ol>';
+const isiOS=/iPad|iPhone|iPod/i.test(navigator.userAgent)||
+   (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/i.test(navigator.userAgent);
+const embeddedBrowser=/FBAN|FBAV|Instagram|WhatsApp|Line\/|;\s*wv\)/i.test(navigator.userAgent);
+function installText(button,hint){
+  $("installBtn").textContent=button;
+  $("installHint").textContent=hint;
+}
+function showInstallGuide(){
+  let steps="";
+  if(embeddedBrowser){
+    steps='<p><b>WhatsApp / Facebook browser</b></p><ol><li>Menu (⋮ / ⋯) ඔබන්න.</li><li><b>Open in Chrome</b> (Android) හෝ <b>Open in Safari</b> (iPhone) තෝරන්න.</li><li>ඊට පස්සේ Install App button එක නැවත ඔබන්න.</li></ol>';
+  }else if(isiOS){
+    steps='<p><b>iPhone / iPad</b> — iOS එකේ websites වලින් direct install කිරීම Apple විසින් ඉඩ නොදේ.</p><ol><li>Browser එකේ <b>Share</b> ⬆ icon එක ඔබන්න.</li><li><b>Add to Home Screen</b> තෝරන්න.</li><li><b>Open as Web App</b> enable කරලා <b>Add</b> ඔබන්න.</li></ol>';
+  }else if(isAndroid){
+    steps='<p><b>Android</b> — Browser එකෙන් install prompt එක තවම ලබාදී නැහැ.</p><ol><li>Page එක <b>Google Chrome</b> එකෙන් open කරන්න.</li><li>Chrome menu <b>⋮</b> ඔබන්න.</li><li><b>Install app</b> හෝ <b>Add to Home screen</b> තෝරන්න.</li></ol><p>App එක කලින් install කරලා තිබුණොත් නැවත install option එක නොපෙන්වන්න පුළුවන්.</p>';
+  }else{
+    steps='<p><b>Install guide</b></p><ol><li>මෙම link එක ඔබේ Android/iPhone එකෙන් open කරන්න.</li><li>Android: Chrome menu ⋮ → Install app.</li><li>iPhone: Share → Add to Home Screen.</li></ol>';
+  }
+  $("installSteps").innerHTML=steps;
   $("installHelp").showModal();
+}
+if(standalone){
+  $("installPanel").classList.add("installed");
+  installText("✓ App Installed","App එක Home Screen icon එකෙන් දැනටමත් open වෙලා තියෙනවා.");
+}else if(isiOS){
+  installText("📲 Add to Home Screen","Button එක ඔබලා iPhone එකට install කරන ලේසි පියවර බලන්න.");
+}else{
+  installText("⬇ Install PRIME HR App","Android Chrome එකෙන් open කරලා මෙතැන ඔබන්න.");
+}
+window.addEventListener("beforeinstallprompt",event=>{
+  event.preventDefault();
+  installPrompt=event;
+  if(!standalone){
+    $("installPanel").classList.remove("installed");
+    installText("⬇ Install PRIME HR App","එක button එකෙන් phone එකේ Install confirmation එක open කරන්න.");
+  }
+});
+window.addEventListener("appinstalled",()=>{
+  installPrompt=null;
+  $("installPanel").classList.add("installed");
+  installText("✓ App Installed","දැන් PRIME HR App icon එක Phone Home Screen එකේ බලන්න.");
+  notify("PRIME HR Test app installed.");
+});
+$("installBtn").addEventListener("click",async()=>{
+  if(standalone){notify("App එක දැනටමත් install කරලා තියෙනවා.");return}
+  if(!installPrompt){showInstallGuide();return}
+  if(installInProgress)return;
+  // prompt() is called immediately within the actual user's click gesture.
+  const promptEvent=installPrompt;
+  installPrompt=null;
+  installInProgress=true;
+  $("installBtn").disabled=true;
+  try{
+    await promptEvent.prompt();
+    const choice=await promptEvent.userChoice;
+    if(choice&&choice.outcome==="accepted"){
+      installText("✓ Installation accepted","Phone Home Screen එකේ PRIME HR icon එක බලන්න.");
+      notify("Install approved. Open it from your Home Screen.");
+    }else{
+      installText("⬇ Install PRIME HR App","Browser එකේ install prompt එක cancel කළා. අවශ්‍ය නම් ආයෙත් උත්සාහ කරන්න.");
+    }
+  }catch(err){
+    installText("📲 Install App – Guide","Browser එකෙන් automatic install prompt එක ලබාගන්න බැරි වුණා.");
+    showInstallGuide();
+  }finally{
+    installInProgress=false;
+    $("installBtn").disabled=false;
+  }
 });
 $("closeHelp").addEventListener("click",()=>$("installHelp").close());
 $("installHelp").addEventListener("click",e=>{if(e.target===$("installHelp"))$("installHelp").close()});
