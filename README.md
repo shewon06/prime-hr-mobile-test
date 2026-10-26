@@ -55,3 +55,11 @@ Deployment checklist:
 Code is hosted in GitHub at shewon06/prime-hr-mobile-test. If a Netlify site already imports this repo, pushes to main can trigger automatic builds. The exact active Netlify/custom-domain URL must be checked in the user's Netlify dashboard. Existing WON MART hosting is not modified. The service worker caches ONLY public app files, never employee records or API data.
 
 This is a development release. Do not collect actual GPS or HR personal records until the backend, permissions, data handling, backups, and security checks are finished.
+
+## Supabase confirmation email redirects (important)
+Before inviting any staff, go to [Authentication → URL Configuration](https://supabase.com/dashboard/project/qkhcojaouueypkgrzlov/auth/url-configuration) in Supabase.
+- **Site URL:** replace the default `http://localhost:3000` with the EXACT production HTTPS root URL shown by your Netlify dashboard or your verified custom domain.
+- **Redirect URLs:** add that exact HTTPS URL including any trailing path you deploy under (e.g. the app root).
+- The frontend signup code passes `emailRedirectTo` derived from its own browser URL; Supabase must permit that URL in Redirect URLs.
+- Do not use a localhost URL for production email confirmation; the confirmation action can succeed while the browser subsequently fails to open localhost.
+- After changing the redirect settings, test with a different newly registered employee (with no real personal details) before rollout. Previously created links keep their original redirect destination.
