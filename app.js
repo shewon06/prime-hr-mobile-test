@@ -50,7 +50,7 @@
       if (state.signup) {
         const full_name=$("auth-name").value.trim();
         if (!full_name) throw Error("Please enter your full name.");
-        const {error}=await state.client.auth.signUp({email,password,options:{data:{full_name}}});
+        const {error}=await state.client.auth.signUp({email,password,options:{emailRedirectTo:new URL("./",window.location.href).href,data:{full_name}}});
         if(error) throw error;
         toast("Registration received. Check your email for confirmation and wait for administrator approval.");
         state.signup=true; toggleAuth(); // revert to login
