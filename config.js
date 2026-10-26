@@ -1,8 +1,8 @@
-/* PRIME HR NEXT LEVEL: publishable configuration only (public website file).
- * Do not paste a Supabase service_role/secret key, password, or personal data here.
- * An organisation-owned Supabase project and SQL migration must be activated first.
+/* PRIME HR NEXT LEVEL • Public frontend configuration.
+ * Supabase publishable key is designed for client apps with RLS enabled.
+ * Never publish a secret/service_role key or real employee records.
  */
 window.PRIME_HR_CONFIG = Object.freeze({
- supabaseUrl:"REPLACE_WITH_YOUR_SUPABASE_PROJECT_URL",
- supabasePublishableKey:"REPLACE_WITH_YOUR_SUPABASE_PUBLISHABLE_KEY"
+ supabaseUrl: "https://qkhcojaouueypkgrzlov.supabase.co",
+ supabasePublishableKey: "sb_publishable_cT49_Bq0hlD4DL65-G3xKg_JQhHx_3H"
 });
