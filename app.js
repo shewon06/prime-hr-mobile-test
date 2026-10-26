@@ -491,7 +491,7 @@
     mapped.staff_code=String(mapped.staff_code||"").toUpperCase().trim();
     if(mapped.joined_on)mapped.joined_on=excelDate(mapped.joined_on);
     if(mapped.date_of_birth)mapped.date_of_birth=excelDate(mapped.date_of_birth);
-    mapped.status=String(mapped.status||"active").toLowerCase();
+    mapped.status=mapped.status?String(mapped.status).toLowerCase():"";
     return mapped;
   }
   function renderStaffPreview(){
