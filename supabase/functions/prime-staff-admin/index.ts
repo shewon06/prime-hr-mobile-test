@@ -77,8 +77,17 @@ const provision=async(raw:Row,actor:string)=>{
   .select("id,staff_code,auth_user_id").eq("staff_code",row.staff_code).maybeSingle();
  if(lookErr)throw Error("Cannot look up employee");
  if(existing?.auth_user_id){
-   const patch={...row};
-   delete (patch as Partial<typeof row>).hired_by;
+   // On re-import: blank/missing optional Excel fields NEVER clear existing HR data.
+   // Also do not reactivate an exited employee when the source Excel omits status.
+   const patch:Record<string,unknown>={...row};
+   delete patch.hired_by;
+   const optional=["phone","national_id","address","date_of_birth","emergency_contact",
+     "employment_type","bank_name","bank_branch","bank_account","epf_no","etf_no",
+     "basic_salary","vehicle_allowance","department","joined_on","status"];
+   for(const key of optional){
+      if(raw[key]===undefined||raw[key]===null||String(raw[key]).trim()==="")
+        delete patch[key];
+   }
    const {error}=await admin.from("employees").update(patch).eq("id",existing.id);
    if(error)throw Error("Employee update failed: "+error.message);
    await log(actor,"employee_updated",existing.id,{staff_code:row.staff_code});
