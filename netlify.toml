@@ -1,21 +1,37 @@
-# PRIME HR NEXT LEVEL PWA Test — Netlify static publish
-# No build step is required; files are at the repository root.
+# PRIME HR NEXT LEVEL - application shell, HTTPS via Netlify
 [build]
-  publish = "."
+ publish="."
 
 [[headers]]
-  for = "/sw.js"
-  [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+ for="/*"
+ [headers.values]
+   X-Content-Type-Options="nosniff"
+   Referrer-Policy="strict-origin-when-cross-origin"
+   Permissions-Policy="geolocation=(self), camera=(), microphone=()"
+   X-Frame-Options="DENY"
 
 [[headers]]
-  for = "/manifest.webmanifest"
-  [headers.values]
-    Content-Type = "application/manifest+json"
-    Cache-Control = "no-cache"
+ for="/index.html"
+ [headers.values]
+   Cache-Control="no-cache, no-store, must-revalidate"
 
 [[headers]]
-  for = "/*"
-  [headers.values]
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
+ for="/app.js"
+ [headers.values]
+   Cache-Control="no-cache, max-age=0"
+
+[[headers]]
+ for="/config.js"
+ [headers.values]
+   Cache-Control="no-cache, no-store, must-revalidate"
+
+[[headers]]
+ for="/sw.js"
+ [headers.values]
+   Cache-Control="no-cache, no-store, must-revalidate"
+
+[[headers]]
+ for="/manifest.webmanifest"
+ [headers.values]
+   Content-Type="application/manifest+json"
+   Cache-Control="no-cache, max-age=0"

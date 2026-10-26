@@ -1,33 +1,45 @@
-# PRIME HR NEXT LEVEL — Mobile Install Test
+# PRIME HR NEXT LEVEL — PRIME Agri Business & Plantations
 
-**Mobile PWA prototype only** — no company authentication, Supabase connection, real employee data, or payroll. The sample check-in, leave and notices are stored locally on your phone.
+This repository supersedes the standalone installation test. It contains cloud-connected frontend source for an online HR employee and management application.
 
-## Publish without changing WON MART
+## Coded modules
+- User registration/login with HR approval and role-based access
+- Employee master, branch register, CSV export
+- Foreground GPS attendance check-in/out with server-side time and Sri Lanka work dates
+- Admin/HR GPS attendance map links and location CSV report
+- Leave applications and HR approvals
+- Recruitment register, company notices and employee acknowledgements
+- Sales KPI, assets and HR letter issuance register
+- Mobile-friendly Progressive Web App (PWA)
 
-The account's user-site custom domain is `wonsolutions.me`, which currently routes to the unrelated WON MART site. Because GitHub Pages can inherit this domain for other repositories, **use a separate Netlify address for this test**. Do not change the existing user-site CNAME.
+## GPS privacy behavior
+The first time an ACTIVE, LINKED employee opens the app, it shows a clear description and **Allow Location Access** button. The browser/phone then asks for explicit consent; the website cannot grant itself permission. A fresh GPS position is collected ONLY when the employee taps Check In / Check Out. HR/Admin can view that snapshot, the server timestamp, and its reported accuracy. There is no continuous background tracking, no watchPosition, and no location history collection outside attendance actions. Without GPS permission or if reported accuracy exceeds 1 km, attendance submission is rejected; a controlled manual correction workflow remains to be developed. Phone/browser GPS coordinates can be spoofed, so this is not guaranteed proof of physical presence.
 
-1. Visit https://app.netlify.com/start and log in.
-2. Choose **Import an existing project**, provider **GitHub**.
-3. Select `shewon06/prime-hr-mobile-test`.
-4. Choose branch `main`, leave the build command empty, set publish directory to `.` (project root). The `netlify.toml` file also sets `publish = "."`.
-5. Select **Deploy/Publish**. Open the exact new `*.netlify.app` address shown in your account. No URL is assumed before deployment.
+## Important: Backend activation is NOT finished
+The connected Supabase account currently has ZERO projects. The Supabase Project URL and public publishable key in config.js are placeholders. This site will show a configuration screen, NOT a fake or local test dashboard, until the database is created and securely configured.
 
-Netlify automatically rebuilds on later GitHub pushes. The host will serve PWA files over HTTPS.
+Deployment checklist:
+1. Select the Supabase organisation, review project cost, and create a company-approved project.
+2. Verify privacy notice, location consent, HR access scope, data retention/deletion period and applicable employment obligations.
+3. In a fresh project, review/apply schema.sql with SQL Editor/migration. Check Supabase security advisors and RLS with at least two staff users and separate HR/Admin users.
+4. Put only the Supabase PROJECT URL and PUBLISHABLE key in config.js. NEVER upload secret/service_role keys, DB passwords or employee files to a public repository.
+5. Configure email verification, secure SMTP, proper site URLs, MFA for admins and backup/incident response.
+6. Create/verify first administrator's account and authorize it in Supabase SQL Editor using a company-approved verified email:
 
-## Test installation
+    UPDATE public.profiles SET role='admin',is_active=true
+    WHERE email=lower('FIRST_ADMIN@YOUR_COMPANY.COM');
 
-**Android:** Open the new Netlify address in Chrome → press the in-app **Install** button or browser menu ⋮ → Install app / Add to Home screen.
+7. Activate approved staff accounts, create matching employee records and test the app before any real company-wide rollout.
 
-**iPhone:** Open the new Netlify address in Safari → Share → Add to Home Screen → Add.
+## Current limitations and remaining work
+- Payroll (EPF, ETF, APIT, payslips and bank exports) is NOT implemented.
+- Appointment letter templates/auto generation need the exact approved company clauses; only a metadata Letter Register exists.
+- Bulk employee CSV import is not implemented, although CSV export exists.
+- Formal GPS retention deletion automation, audit reports, device attestation, spoof detection, geofencing, and manual attendance adjustment need implementation.
+- Native Play Store / App Store packages and push notifications are not implemented.
+- The official PRIME gold logo is not included; the app currently uses a P placeholder.
 
-Close your browser, launch the new PRIME HR Test icon, and try dummy Check In, Apply Leave, and Notices. No production records are involved.
+## Hosting
+Code is hosted in GitHub at shewon06/prime-hr-mobile-test. If a Netlify site already imports this repo, pushes to main can trigger automatic builds. The exact active Netlify/custom-domain URL must be checked in the user's Netlify dashboard. Existing WON MART hosting is not modified. The service worker caches ONLY public app files, never employee records or API data.
 
-## Files
-
-- `index.html` — responsive employee app prototype and test-only local interactions
-- `manifest.webmanifest` — app name, icons and standalone launch settings
-- `sw.js` — offline service worker
-- `icon-192.png`, `icon-512.png` — generic sample app icons, not official PRIME branding
-- `netlify.toml` — static PWA hosting configuration
-
-**Reminder:** This is an installation test. The planned actual PRIME HR NEXT LEVEL system needs a private backend, tested permission rules, company approvals and an employee account provisioning process.
+This is a development release. Do not collect actual GPS or HR personal records until the backend, permissions, data handling, backups, and security checks are finished.

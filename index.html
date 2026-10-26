@@ -1,255 +1,170 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#143f32">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="PRIME HR Test">
-<meta name="description" content="PRIME HR NEXT LEVEL mobile install experience test - no real employee data.">
-<link rel="manifest" href="./manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
-<title>PRIME HR NEXT LEVEL · Mobile Test</title>
-<style>
-:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#1d342c;background:#eff4ef;font-synthesis:none}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#eaf0ea}button,input,select,textarea{font:inherit}button{cursor:pointer}
-.shell{margin:0 auto;max-width:480px;min-height:100dvh;background:#f8faf7;position:relative;box-shadow:0 0 35px #1d30221a;padding-bottom:calc(94px + env(safe-area-inset-bottom))}
-.top{background:linear-gradient(145deg,#10392e,#205443);color:white;padding:calc(20px + env(safe-area-inset-top)) 23px 29px;border-radius:0 0 27px 27px;position:relative;overflow:hidden}
-.top:after{content:"";position:absolute;right:-55px;top:-60px;width:210px;height:210px;border:1px solid #dabb7850;border-radius:50%;pointer-events:none}
-.brand{display:flex;align-items:center;gap:12px;position:relative;z-index:1}
-.logo{display:grid;place-items:center;border:1.5px solid #e3bf7c;color:#e8c984;background:#244e3e;font-size:18px;font-weight:900;letter-spacing:-2px;width:49px;height:49px;border-radius:14px}
-.brand b{font-size:17px;letter-spacing:.09em}.brand small{display:block;color:#d5bc81;font-size:10px;letter-spacing:.16em;margin-top:3px;font-weight:700}
-.topline{display:flex;align-items:center;justify-content:space-between;margin-top:26px;gap:10px;position:relative;z-index:1}
-.topline p{margin:0;color:#c8dfcf;font-size:13px}.topline h1{font-size:24px;letter-spacing:-.7px;margin:4px 0 0;line-height:1.15}
-.testchip{font-size:10px;color:#d7f9e5;background:#2c7054;padding:8px 11px;border-radius:999px;font-weight:800;letter-spacing:.08em;white-space:nowrap}
-.container{padding:21px 18px 8px}.view{display:none}.view.active{display:block}
-.note{display:flex;gap:10px;align-items:flex-start;background:#fff8eb;border:1px solid #efdfbb;color:#8b6325;padding:12px;border-radius:13px;font-size:12px;line-height:1.45;margin-bottom:16px}.note b{display:block;margin-bottom:3px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
-.stat{background:white;border-radius:15px;padding:16px;box-shadow:0 1px 8px #2445320b;border:1px solid #edf1ec;min-height:110px;display:flex;flex-direction:column;gap:9px}
-.stat .ic{font-size:20px}.stat b{font-size:18px;color:#164331}.stat small{font-size:11px;color:#829088;font-weight:600}
-.card{background:#fff;border:1px solid #e7ece6;border-radius:17px;padding:19px;margin-bottom:15px;box-shadow:0 2px 14px #163e2409}
-.section-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 13px;gap:10px}.section-head h2{font-size:16px;letter-spacing:-.25px;margin:0}.section-head span{font-size:11px;color:#879a8e}.card p{line-height:1.6;margin:9px 0;color:#75887c;font-size:13px}
-.datebadge{display:inline-flex;background:#eef7f0;color:#226849;font-size:11px;padding:7px 10px;border-radius:20px;font-weight:700}
-.attime{font-size:29px;font-weight:850;color:#153f31;letter-spacing:-1px}.attime small{font-size:12px;font-weight:500;color:#788a7f;letter-spacing:normal;margin-left:7px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px}.btn{background:#164b37;color:#fff;font-weight:800;font-size:13px;border:1px solid #164b37;padding:13px 16px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:45px}
-.btn:disabled{background:#e6ebe6;color:#829086;border-color:#e6ebe6;cursor:default}.btn.secondary{background:#fff;color:#205342;border-color:#cddfd4}.btn.wide{width:100%}.btn.outline{background:transparent;color:#15543a;border:1px solid #b5cebe}
-.subheading{margin:23px 2px 12px;font-size:15px;font-weight:850;color:#264437}
-.tilegrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}.tile{display:flex;align-items:center;gap:10px;padding:14px 12px;background:#fff;border:1px solid #e7efe7;border-radius:13px;font-weight:750;font-size:12px;text-align:left;color:#294736}
-.tile .ic{display:grid;place-items:center;width:34px;height:34px;font-size:17px;background:#ebf3ed;border-radius:10px}
-.profileline{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #edf0ec;font-size:13px}.profileline:last-child{border:0}.profileline span{color:#839287}.profileline b{font-size:12px;text-align:right}
-label{display:grid;gap:7px;color:#2a4a3a;font-size:12px;font-weight:750;margin:14px 0}
-input,select,textarea{padding:12px;width:100%;border:1px solid #dce7dc;background:#fff;border-radius:11px;color:#2a4a3a;outline:none;min-height:45px}
-input:focus,select:focus,textarea:focus{border-color:#75aa87}textarea{resize:vertical;min-height:78px}.split{display:grid;grid-template-columns:1fr 1fr;gap:11px}.muted{color:#859489;font-size:12px}.listrow{display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid #edf1eb}.listrow:last-child{border:0}.listrow .round{display:grid;place-items:center;flex-shrink:0;width:39px;height:39px;border-radius:11px;background:#edf6ed;color:#2a7650;font-size:20px}.listrow .inner{flex:1;min-width:0}.listrow b{font-size:13px}.listrow p{margin:4px 0 0;font-size:12px}.pill{font-size:10px;padding:5px 8px;border-radius:50px;background:#fff2d8;color:#976b1e;font-weight:800;white-space:nowrap}.pill.green{background:#e4f4e9;color:#187746}
-.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(480px,100%);height:calc(72px + env(safe-area-inset-bottom));background:white;display:flex;justify-content:space-around;gap:3px;padding:7px 7px env(safe-area-inset-bottom);border-top:1px solid #e1e9e1;z-index:10;box-shadow:0 -4px 16px #1541240b}
-.nav{flex:1;border:0;background:transparent;color:#899b8e;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:10px;font-weight:750;border-radius:12px}.nav .ni{font-size:23px;line-height:1}.nav.active{color:#155c3b;background:#eef7ef}
-.installstrip{background:#ebf4e9;border-radius:14px;border:1px solid #d1e5d2;padding:14px;margin:16px 0;display:flex;align-items:center;gap:10px}
-.installstrip span{font-size:23px}.installstrip b{display:block;font-size:12px}.installstrip small{display:block;font-size:11px;color:#668071;margin-top:4px}.installstrip button{border:0;background:#1b543b;color:white;font-weight:750;padding:10px 12px;border-radius:9px;font-size:11px;white-space:nowrap}
-dialog{border:0;border-radius:18px;padding:22px;width:calc(100% - 32px);max-width:410px;color:#284b37;box-shadow:0 15px 80px #193e3099}dialog::backdrop{background:#06190f88}dialog h2{margin:4px 0 13px}dialog ol{line-height:2;font-size:13px;padding-left:23px}dialog p{font-size:13px;line-height:1.6;color:#697f70}
-.toast{display:none;position:fixed;z-index:70;left:50%;bottom:calc(86px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(430px,calc(100% - 35px));background:#163f32;color:white;padding:13px 15px;border-radius:12px;text-align:center;font-size:12px;box-shadow:0 6px 25px #11311d35}
-.toast.show{display:block}
-@media(min-width:500px){body{padding:20px 0}.shell{border-radius:25px;overflow:hidden;min-height:calc(100dvh - 40px)}.bottomnav{bottom:0;border-radius:16px 16px 0 0}}
-
-/* Easy-install CTA: the main action is the largest button on the home screen */
-.installhero{display:block;background:linear-gradient(145deg,#eaf6ed,#f8fbf3);border:1.5px solid #b3d5ba;padding:19px 16px 14px;border-radius:19px;box-shadow:0 4px 16px #13472d0b}
-.installtop{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.installemoji{font-size:29px;flex:0 0 auto;display:grid;place-items:center;width:50px;height:50px;background:#d7ecdd;border-radius:13px}
-.installtop b{font-size:15px;color:#164936;letter-spacing:-.2px}
-.installtop small{font-size:12px;color:#547b60;line-height:1.5;margin-top:5px}
-.install-action{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;padding:14px 16px;background:#17603e;color:white;border:0;border-radius:13px;font-size:16px;font-weight:850;box-shadow:0 5px 15px #184f3330;letter-spacing:.1px}
-.install-action:active{transform:scale(.99)}.install-action:disabled{opacity:.73;cursor:default}
-.install-hint{color:#557f65!important;text-align:center!important;font-size:11.5px!important;margin:10px 4px 0!important;line-height:1.5!important}
-.installhero.installed{background:#e6f5e9;border-color:#9acbaa}
-.installhero.installed .install-action{background:#e0eee4;color:#316347;box-shadow:none}
-.installhero.installed .installtop b{color:#266745}
-
-</style></head><body>
-<div class="shell">
- <header class="top">
-  <div class="brand"><div class="logo" aria-label="HR test icon">HR</div><div><b>PRIME</b><small>HR NEXT LEVEL</small></div></div>
-  <div class="topline"><div><p>Welcome,</p><h1>Demo Employee 👋</h1></div><span class="testchip">TEST MODE</span></div>
- </header>
- <main class="container">
- <section id="home" class="view active">
-   <div class="note"><span>🧪</span><div><b>Installation test only</b>Dummy employee account. Nothing connects to the company HR database. Demo actions are saved only on this phone.</div></div>
-   <div class="installstrip installhero" id="installPanel">
-     <div class="installtop"><span class="installemoji" aria-hidden="true">📲</span><div><b>PRIME HR App එක Install කරන්න</b><small>Phone එකේ Home Screen එකට පහසුවෙන්</small></div></div>
-     <button id="installBtn" type="button" class="install-action">⬇ Install PRIME HR App</button>
-     <p class="install-hint" id="installHint">Button එක ඔබලා app එක install කරගන්න.</p>
-   </div>
-   <div class="grid2"><div class="stat"><span class="ic">🕘</span><div><b id="homeStatus">Not checked in</b><small style="display:block;margin-top:5px">Today's attendance</small></div></div><div class="stat"><span class="ic">📅</span><div><b id="homeLeave">0 requests</b><small style="display:block;margin-top:5px">Demo leave requests</small></div></div></div>
-   <article class="card"><div class="section-head"><h2>Today's attendance</h2><span id="todayLabel"></span></div>
-    <div class="row" style="margin:18px 0"><div><div class="attime" id="timeNow">--:--</div><small class="muted">Sri Lanka time</small></div><span class="datebadge" id="attendanceBadge">Not checked in</span></div>
-    <div class="row"><button id="homeIn" class="btn" data-attendance="in">● Check In</button><button id="homeOut" class="btn secondary" data-attendance="out">◯ Check Out</button></div>
-   </article>
-   <div class="subheading">Quick services</div><div class="tilegrid"><button class="tile" data-go="attendance"><span class="ic">🕒</span> Attendance</button><button class="tile" data-go="leave"><span class="ic">🏖️</span> Apply Leave</button><button class="tile" data-go="notices"><span class="ic">🔔</span> Notices</button><button class="tile" data-go="profile"><span class="ic">👤</span> My Profile</button></div>
- </section>
- <section id="attendance" class="view">
-  <div class="section-head"><h2>My Attendance</h2><span class="datebadge">TEST</span></div>
-  <article class="card"><p>Test the check-in/check-out buttons below. The times are generated on your device, not verified by the HR system.</p>
-   <div class="row" style="margin:16px 0"><span class="muted">Today's status</span><span class="datebadge" id="attendanceBadge2">Not checked in</span></div>
-   <div class="row"><button class="btn" data-attendance="in" id="pageIn">● Check In</button><button class="btn secondary" data-attendance="out" id="pageOut">◯ Check Out</button></div>
-  </article>
-  <article class="card"><div class="section-head"><h2>Recent activity</h2></div><div id="attendanceList" class="muted">No demo check-ins yet.</div></article>
- </section>
- <section id="leave" class="view">
-  <div class="section-head"><h2>Leave Requests</h2><span class="datebadge">TEST</span></div>
-  <article class="card"><p>Submit a sample leave request to test the mobile form. This does not go to HR.</p>
-   <form id="leaveForm"><label>Leave type<select name="type" required><option>Casual Leave</option><option>Annual Leave</option><option>Medical Leave</option></select></label>
-    <div class="split"><label>From<input name="from" type="date" required></label><label>To<input name="to" type="date" required></label></div>
-    <label>Reason (dummy text only)<textarea name="reason" maxlength="120" placeholder="Test request" required></textarea></label><button class="btn wide" type="submit">Submit Test Request</button>
-   </form>
-  </article>
-  <article class="card"><div class="section-head"><h2>Demo requests</h2></div><div id="leaveList"></div></article>
- </section>
- <section id="notices" class="view">
-  <div class="section-head"><h2>HR Notices</h2><span class="datebadge">TEST</span></div>
-  <article class="card"><div class="listrow"><span class="round">📢</span><div class="inner"><b>Welcome to PRIME HR NEXT LEVEL</b><p>This is a sample notification. Tap Acknowledge to test the action.</p><button id="ackBtn" class="btn secondary" type="button" style="margin-top:12px"></button></div></div></article>
-  <article class="card"><div class="listrow"><span class="round">✅</span><div class="inner"><b>Mobile app test</b><p>Install the app to your phone, close the browser, and open it again using the Home Screen icon.</p></div></div></article>
- </section>
- <section id="profile" class="view">
-  <div class="section-head"><h2>My Profile</h2><span class="datebadge">DEMO</span></div>
-  <article class="card"><div class="profileline"><span>Name</span><b>Demo Employee</b></div><div class="profileline"><span>Staff code</span><b>TEST001</b></div><div class="profileline"><span>Branch</span><b>Sample Branch</b></div><div class="profileline"><span>Account type</span><b>Local demo</b></div><div class="profileline"><span>Cloud connected</span><b>No</b></div></article>
-  <div class="note"><span>🔒</span><div><b>No real HR account</b>This test intentionally has no login, payroll, location tracking, or access to staff information. Never enter real employee information here.</div></div>
-  <button class="btn secondary wide" id="resetDemo" type="button">Reset Test Data</button>
- </section>
- </main>
- <nav class="bottomnav" aria-label="Main navigation">
-  <button class="nav active" data-tab="home"><span class="ni">⌂</span>Home</button>
-  <button class="nav" data-tab="attendance"><span class="ni">◷</span>Attendance</button>
-  <button class="nav" data-tab="leave"><span class="ni">▤</span>Leave</button>
-  <button class="nav" data-tab="notices"><span class="ni">♧</span>Notices</button>
-  <button class="nav" data-tab="profile"><span class="ni">◉</span>Profile</button>
- </nav>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123a2c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PRIME HR">
+  <meta name="description" content="Private employee and management HR portal for PRIME Agri Business & Plantations.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="icon" href="./icon-192.png" type="image/png">
+  <title>PRIME HR NEXT LEVEL | Workforce Platform</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./config.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="loader" class="screen-loader"><div class="spinner"></div><p>Opening PRIME HR NEXT LEVEL...</p></div>
+<section id="setup-screen" class="auth-shell hidden">
+  <div class="auth-brand"><div class="logo-mark">P<span>✦</span></div><h1>PRIME <em>HR NEXT LEVEL</em></h1><p>People · Performance · Progress</p></div>
+  <div class="auth-card"><span class="eyebrow">CLOUD SETUP</span><h2>Connect your secure database</h2>
+    <p>This online application is published. To accept live employee data, configure Supabase Auth and the database first. No real HR records should be entered until setup is complete.</p>
+    <ol><li>Create your own Supabase project.</li><li>Run the supplied <code>schema.sql</code> in Supabase SQL Editor.</li><li>Set the project's URL and publishable key in <code>config.js</code> on GitHub.</li><li>Create your login and approve the first admin via the README instructions.</li></ol>
+    <a class="btn primary" href="https://github.com/shewon06/prime-hr-mobile-test">View setup files</a>
+  </div>
+</section>
+<section id="auth-screen" class="auth-shell hidden">
+  <div class="auth-brand"><div class="logo-mark">P<span>✦</span></div><h1>PRIME <em>HR NEXT LEVEL</em></h1><p>People · Performance · Progress</p><div class="auth-caption">A secure workforce hub for PRIME Agri Business &amp; Plantations</div></div>
+  <div class="auth-card">
+    <span class="eyebrow">STAFF ACCESS</span><h2 id="auth-title">Welcome back</h2><p>Sign in with your approved employee account.</p>
+    <form id="auth-form">
+      <label for="auth-name" id="name-wrap" class="hidden">Full name<input id="auth-name" autocomplete="name" maxlength="120"></label>
+      <label for="auth-email">Email address<input id="auth-email" type="email" autocomplete="email" required></label>
+      <label for="auth-password">Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="8"></label>
+      <button class="btn primary wide" type="submit" id="auth-submit">Sign in</button>
+    </form>
+    <button id="toggle-auth" class="link-button">New employee? Request an account</button>
+    <p class="fineprint">Registration does not grant HR access. An administrator must approve every account.</p>
+  </div>
+</section>
+<section id="pending-screen" class="auth-shell hidden">
+  <div class="auth-brand"><div class="logo-mark">P<span>✦</span></div><h1>PRIME <em>HR NEXT LEVEL</em></h1><p>People · Performance · Progress</p></div>
+  <div class="auth-card"><span class="eyebrow">ACCOUNT REVIEW</span><h2>Awaiting HR approval</h2><p>Your account is registered, but access to private HR records remains blocked until an administrator enables it.</p><p id="pending-user" class="muted"></p><button class="btn" id="pending-logout">Sign out</button></div>
+</section>
+<div id="workspace" class="shell hidden">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><div class="logo-mark small">P<span>✦</span></div><div><strong>PRIME</strong><small>HR NEXT LEVEL</small></div></div>
+    <div class="sidebar-caption">WORKSPACE</div>
+    <nav id="nav">
+      <button data-view="dashboard" class="nav-item active"><span>▦</span> Overview</button>
+      <button data-view="employees" class="nav-item hr-only"><span>♙</span> Employees</button>
+      <button data-view="attendance" class="nav-item"><span>◷</span> Attendance</button>
+      <button data-view="locations" class="nav-item hr-only"><span>⌖</span> GPS Attendance</button>
+      <button data-view="leave" class="nav-item"><span>▤</span> Leave requests</button>
+      <button data-view="recruitment" class="nav-item hr-only"><span>◈</span> Recruitment</button>
+      <button data-view="notices" class="nav-item"><span>♧</span> HR Notices</button>
+      <button data-view="profile" class="nav-item"><span>◉</span> My profile</button>
+      <button data-view="kpi" class="nav-item hr-only"><span>▥</span> Sales KPI</button>
+      <button data-view="assets" class="nav-item hr-only"><span>▱</span> Assets</button>
+      <button data-view="letters" class="nav-item hr-only"><span>▤</span> Letter Register</button>
+      <button data-view="accounts" class="nav-item admin-only"><span>⚙</span> User access</button>
+      <div class="nav-divider"></div>
+      <button data-view="roadmap" class="nav-item"><span>✦</span> Future modules</button>
+    </nav>
+    <div class="sidebar-bottom"><span class="live-dot"></span> Secure cloud workspace <small id="side-role">Signed in</small></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><button class="mobile-nav btn outline" id="menu-toggle" aria-label="Toggle menu">☰</button><span class="crumb">PRIME / <b id="crumb-label">Overview</b></span></div><div class="top-actions"><span class="today" id="today-label"></span><span class="avatar" id="user-initial">P</span><span class="identity"><b id="user-name">Employee</b><small id="user-role">Employee</small></span><button class="btn outline" id="logout">Logout</button></div></header>
+    <div class="content">
+      <div class="page-header"><div><span class="eyebrow" id="page-eyebrow">MANAGEMENT CENTRE</span><h1 id="page-title">Workforce overview</h1><p id="page-subtitle">Live, permission-controlled people operations.</p></div><button class="btn outline" id="refresh">↻ Refresh</button></div>
+      <section id="view-dashboard" class="view">
+        <div class="metrics">
+          <div class="metric"><span>Active Employees</span><strong id="m-employees">—</strong><small>Directory records</small></div>
+          <div class="metric"><span>Present today</span><strong id="m-present">—</strong><small>Attendance check-ins</small></div>
+          <div class="metric"><span>Pending leave</span><strong id="m-leave">—</strong><small>Awaiting decision</small></div>
+          <div class="metric"><span>Recruitment</span><strong id="m-hiring">—</strong><small>Active candidates</small></div>
+        </div>
+        <div class="split"><article class="panel"><div class="panel-head"><h3>Welcome to your HR workspace</h3><span class="pill">LIVE DATA</span></div><p>The dashboard reads directly from your private Supabase database. Employees can only see their own permitted records; HR sees company operations.</p><div id="welcome-summary" class="tip"></div></article><article class="panel"><div class="panel-head"><h3>PRIME locations</h3></div><div id="branch-list" class="branch-list"></div></article></div>
+        <article class="panel"><div class="panel-head"><h3>Quick actions</h3></div><div class="quick-grid"><button data-go="attendance" class="quick">◷<b>Mark attendance</b><small>Record a secure check-in</small></button><button data-go="leave" class="quick">▤<b>Apply for leave</b><small>Track request status</small></button><button data-go="employees" class="quick hr-only">♙<b>Employee records</b><small>Manage staff directory</small></button></div></article>
+      </section>
+      <section id="view-employees" class="view hidden">
+        <div class="panel"><div class="panel-head"><h3>Employee directory</h3><button class="btn primary" id="employee-add">+ Add employee</button></div><div class="toolbar"><input id="employee-search" placeholder="Search by name, staff code, or branch"><button class="btn outline" id="employee-export">Export CSV</button></div><div class="table-scroll"><table><thead><tr><th>Staff code</th><th>Employee</th><th>Designation</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody id="employee-rows"></tbody></table></div></div>
+      </section>
+      <section id="view-attendance" class="view hidden">
+        <div class="split"><article class="panel"><div class="panel-head"><h3>My attendance</h3><span class="pill" id="attendance-state">NOT CHECKED IN</span></div><p id="attendance-info" class="muted">Attendance uses secure server timestamps (Sri Lanka local work date).</p><div class="button-row"><button class="btn primary" id="checkin">Check in</button><button class="btn outline" id="checkout">Check out</button></div><label class="mode-picker">Work location
+            <select id="attendance-mode"><option value="office">Office</option><option value="field">Field / Customer Visit</option></select>
+            </label>
+            <div class="gps-help"><b>📍 GPS Attendance Enabled</b><p>The app requests your current location only when you enable location and when you press Check In / Check Out. A GPS snapshot, accuracy and server time will be visible to authorised HR/Admin users. No background tracking.</p><button id="location-settings" type="button" class="btn outline">Location permission settings</button><span id="gps-status" class="muted">Location not yet enabled</span></div></article><article class="panel"><div class="panel-head"><h3>Today's summary</h3></div><div id="attendance-summary" class="tip">Loading…</div></article></div>
+        <article class="panel"><div class="panel-head"><h3>Attendance records</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Work date</th><th>Check-in</th><th>Check-out</th><th>Mode</th></tr></thead><tbody id="attendance-rows"></tbody></table></div></article>
+      </section>
+      
+      <section id="view-locations" class="view hidden">
+        <article class="panel">
+         <div class="panel-head"><h3>Staff Attendance GPS Locations</h3><span class="pill">HR / ADMIN ONLY</span></div>
+         <p class="fineprint">Exact GPS coordinates are private and visible only to approved HR/Admin users. Each record is captured when employees Check In / Check Out, not continuously. Accuracy reflects the phone's estimate; web GPS is not tamper-proof.</p>
+         <div class="toolbar"><input type="date" id="gps-filter" aria-label="Filter locations by date"><button class="btn outline" id="gps-export">Export GPS CSV (HR only)</button></div>
+         <div class="table-scroll"><table><thead><tr><th>Employee / Code</th><th>Event</th><th>Server time</th><th>Accuracy</th><th>Map</th></tr></thead><tbody id="location-rows"></tbody></table></div>
+        </article>
+      </section>
+      <section id="view-leave" class="view hidden">
+        <div class="split"><article class="panel"><div class="panel-head"><h3>New leave request</h3></div><form id="leave-form" class="form-grid"><label>Leave category<select name="kind" required><option>Annual</option><option>Casual</option><option>Medical</option><option>No-pay</option></select></label><div class="two"><label>From<input type="date" name="from_date" required></label><label>To<input type="date" name="to_date" required></label></div><label>Reason<textarea name="reason" maxlength="600" rows="3" required></textarea></label><button class="btn primary" type="submit">Submit request</button></form></article><article class="panel"><div class="panel-head"><h3>Approval process</h3></div><p>Requests are created with Pending status. Only an authorised HR user can approve or reject a request; the employee cannot modify the approval.</p><div class="tip">Leave balance and statutory entitlement calculations are scheduled for a subsequent phase and are not represented as approved balances here.</div></article></div>
+        <article class="panel"><div class="panel-head"><h3>Leave register</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th>Reason</th><th>Action</th></tr></thead><tbody id="leave-rows"></tbody></table></div></article>
+      </section>
+      <section id="view-recruitment" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Candidate pipeline</h3><button class="btn primary" id="candidate-add">+ Add candidate</button></div><div class="table-scroll"><table><thead><tr><th>Candidate</th><th>Position</th><th>Branch</th><th>Stage</th><th>Notes</th><th></th></tr></thead><tbody id="candidate-rows"></tbody></table></div></article>
+      </section>
+      
+      <section id="view-notices" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Company notices</h3><button class="btn primary hr-only" id="notice-add">+ Publish notice</button></div>
+         <div id="notice-items" class="notice-list"></div>
+        </article>
+      </section>
+      <section id="view-profile" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>My employee profile</h3></div><div id="profile-details" class="profile-details"></div></article>
+        <article class="panel"><h3>App location & privacy</h3><p>Location snapshots are collected only on attendance actions. Your browser or phone can revoke the location permission at any time; without GPS check-in will not proceed. HR/Admin can view the exact check-in/out snapshots.</p><button class="btn outline" id="profile-location-settings">Review Location Permission</button></article>
+      </section>
+      <section id="view-kpi" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Sales KPI / Business Tracker</h3><button class="btn primary" id="kpi-add">+ Add KPI</button></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Target (LKR)</th><th>Achieved (LKR)</th><th>Completion</th></tr></thead><tbody id="kpi-rows"></tbody></table></div></article>
+      </section>
+      <section id="view-assets" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Asset Register</h3><button class="btn primary" id="asset-add">+ Add asset</button></div><div class="table-scroll"><table><thead><tr><th>Asset Tag</th><th>Description</th><th>Assigned to</th><th>Status</th></tr></thead><tbody id="asset-rows"></tbody></table></div></article>
+      </section>
+      <section id="view-letters" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
+        <p class="fineprint">This tracks draft and issued letters. Generation of legally approved position-specific appointment letters needs the company's exact approved templates before activation. No letter is automatically signed.</p>
+        <div class="table-scroll"><table><thead><tr><th>Document No.</th><th>Employee</th><th>Type</th><th>Date</th><th>Status</th></tr></thead><tbody id="letter-rows"></tbody></table></div></article>
+      </section>
+      <section id="view-accounts" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Account approvals &amp; roles</h3></div><p class="muted">Only administrators can approve new signups, change roles, or deactivate access. Use matching verified emails to associate employee profiles.</p><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Access</th><th>Action</th></tr></thead><tbody id="account-rows"></tbody></table></div></article>
+      </section>
+      <section id="view-roadmap" class="view hidden">
+        <div class="roadmap-grid">
+          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Payroll &amp; Sri Lanka compliance</h3><p>EPF, ETF, APIT, overtime, bank formats, pay slip approval and audit trail. Do not use a prototype for salary disbursements.</p></article>
+          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Letters &amp; documents</h3><p>Company-approved appointment templates, bulk issuance, signing, personnel documents and document acknowledgements.</p></article>
+          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Sales performance &amp; KPI</h3><p>Region / zone structures, monthly business targets, monthly performance and regional leaderboards.</p></article>
+          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Further security & approval</h3><p>MFA enforcement, admin audit reports, retention automation, location accuracy monitoring, HR mobile training and independent security review before collecting live staff data.</p></article>
+        </div>
+      </section>
+    </div>
+  </main>
 </div>
-<dialog id="installHelp"><h2>📲 Install PRIME HR Test</h2><div id="installSteps"></div><button id="closeHelp" class="btn wide">Got it</button></dialog>
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script>
-(()=>{"use strict";
-const $=id=>document.getElementById(id),KEY="prime_hr_install_test_v1";
-const fresh=()=>({attendance:{},leaves:[],ack:false});
-let data;try{data=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){data=fresh()}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){notify("Storage unavailable; changes may not be saved.")}};
-const lkDate=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()).replaceAll("/","-");
-const day=()=>{const d=new Date();return new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Colombo",weekday:"short",day:"2-digit",month:"short"}).format(d)};
-const clock=(ts)=>ts?new Date(ts).toLocaleTimeString("en-GB",{timeZone:"Asia/Colombo",hour:"2-digit",minute:"2-digit"}):"—";
-const escapeHTML=s=>String(s??"").replace(/[&<>"']/g,x=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[x]));
-let tm;const notify=(s)=>{const n=$("toast");n.textContent=s;n.classList.add("show");clearTimeout(tm);tm=setTimeout(()=>n.classList.remove("show"),3200)};
-function render(){
-  const today=lkDate(),a=data.attendance[today];
-  $("todayLabel").textContent=day();
-  $("timeNow").textContent=clock(new Date().toISOString());
-  const label=a?.out?"Completed":a?.in?"Checked in":"Not checked in";
-  $("homeStatus").textContent=label;$("homeLeave").textContent=data.leaves.length+" requests";
-  $("attendanceBadge").textContent=label;$("attendanceBadge2").textContent=label;
-  ["homeIn","pageIn"].forEach(id=>$(id).disabled=!!a?.in);
-  ["homeOut","pageOut"].forEach(id=>$(id).disabled=!a?.in||!!a?.out);
-  const entries=Object.entries(data.attendance).sort((a,b)=>b[0].localeCompare(a[0]));
-  $("attendanceList").innerHTML=entries.length?entries.map(([d,a])=>'<div class="listrow"><span class="round">🕒</span><div class="inner"><b>'+escapeHTML(d)+'</b><p>In: '+escapeHTML(clock(a.in))+' · Out: '+escapeHTML(clock(a.out))+'</p></div><span class="pill green">'+(a.out?"Done":"Active")+'</span></div>').join(""):'<p>No demo check-ins yet.</p>';
-  $("leaveList").innerHTML=data.leaves.length?data.leaves.slice().reverse().map(l=>'<div class="listrow"><span class="round">📅</span><div class="inner"><b>'+escapeHTML(l.type)+'</b><p>'+escapeHTML(l.from)+' to '+escapeHTML(l.to)+'</p><p>'+escapeHTML(l.reason)+'</p></div><span class="pill">Demo pending</span></div>').join(""):'<p class="muted">No test requests submitted yet.</p>';
-  $("ackBtn").textContent=data.ack?"✓ Acknowledged":"Acknowledge";
-  $("ackBtn").disabled=!!data.ack;
-}
-function nav(name){
-  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===name));
-  document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
-  document.querySelector(".container").scrollIntoView({block:"start"});
-}
-document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>nav(b.dataset.tab)));
-document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>nav(b.dataset.go)));
-document.querySelectorAll("[data-attendance]").forEach(b=>b.addEventListener("click",()=>{
-  const d=lkDate(),what=b.dataset.attendance;
-  if(what==="in"){if(data.attendance[d]?.in)return notify("Already checked in today.");data.attendance[d]={in:new Date().toISOString(),out:null};notify("Demo check-in saved on this device.");}
-  else{if(!data.attendance[d]?.in||data.attendance[d]?.out)return notify("No active demo check-in.");data.attendance[d].out=new Date().toISOString();notify("Demo check-out saved on this device.");}
-  save();render();
-}));
-$("leaveForm").addEventListener("submit",e=>{
-  e.preventDefault();const f=new FormData(e.target),from=String(f.get("from")),to=String(f.get("to"));
-  if(to<from)return notify("End date must be after start date.");
-  data.leaves.push({type:String(f.get("type")),from,to,reason:String(f.get("reason")).slice(0,120)});
-  save();e.target.reset();render();notify("Demo leave request saved locally.");
-});
-$("ackBtn").addEventListener("click",()=>{data.ack=true;save();render();notify("Notice acknowledged (demo only).")});
-$("resetDemo").addEventListener("click",()=>{if(!confirm("Remove all local demo check-ins and requests?"))return;data=fresh();save();render();notify("Demo data reset.")});
-setInterval(()=>{$("timeNow").textContent=clock(new Date().toISOString())},30000);
-// A native installation prompt is available only on supported browsers (typically Android Chromium).
-// iOS does not permit websites to install directly; one tap shows precise, short instructions.
-let installPrompt=null;
-let installInProgress=false;
-const standalone=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
-const isiOS=/iPad|iPhone|iPod/i.test(navigator.userAgent)||
-   (navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-const isAndroid=/Android/i.test(navigator.userAgent);
-const embeddedBrowser=/FBAN|FBAV|Instagram|WhatsApp|Line\/|;\s*wv\)/i.test(navigator.userAgent);
-function installText(button,hint){
-  $("installBtn").textContent=button;
-  $("installHint").textContent=hint;
-}
-function showInstallGuide(){
-  let steps="";
-  if(embeddedBrowser){
-    steps='<p><b>WhatsApp / Facebook browser</b></p><ol><li>Menu (⋮ / ⋯) ඔබන්න.</li><li><b>Open in Chrome</b> (Android) හෝ <b>Open in Safari</b> (iPhone) තෝරන්න.</li><li>ඊට පස්සේ Install App button එක නැවත ඔබන්න.</li></ol>';
-  }else if(isiOS){
-    steps='<p><b>iPhone / iPad</b> — iOS එකේ websites වලින් direct install කිරීම Apple විසින් ඉඩ නොදේ.</p><ol><li>Browser එකේ <b>Share</b> ⬆ icon එක ඔබන්න.</li><li><b>Add to Home Screen</b> තෝරන්න.</li><li><b>Open as Web App</b> enable කරලා <b>Add</b> ඔබන්න.</li></ol>';
-  }else if(isAndroid){
-    steps='<p><b>Android</b> — Browser එකෙන් install prompt එක තවම ලබාදී නැහැ.</p><ol><li>Page එක <b>Google Chrome</b> එකෙන් open කරන්න.</li><li>Chrome menu <b>⋮</b> ඔබන්න.</li><li><b>Install app</b> හෝ <b>Add to Home screen</b> තෝරන්න.</li></ol><p>App එක කලින් install කරලා තිබුණොත් නැවත install option එක නොපෙන්වන්න පුළුවන්.</p>';
-  }else{
-    steps='<p><b>Install guide</b></p><ol><li>මෙම link එක ඔබේ Android/iPhone එකෙන් open කරන්න.</li><li>Android: Chrome menu ⋮ → Install app.</li><li>iPhone: Share → Add to Home Screen.</li></ol>';
-  }
-  $("installSteps").innerHTML=steps;
-  $("installHelp").showModal();
-}
-if(standalone){
-  $("installPanel").classList.add("installed");
-  installText("✓ App Installed","App එක Home Screen icon එකෙන් දැනටමත් open වෙලා තියෙනවා.");
-}else if(isiOS){
-  installText("📲 Add to Home Screen","Button එක ඔබලා iPhone එකට install කරන ලේසි පියවර බලන්න.");
-}else{
-  installText("⬇ Install PRIME HR App","Android Chrome එකෙන් open කරලා මෙතැන ඔබන්න.");
-}
-window.addEventListener("beforeinstallprompt",event=>{
-  event.preventDefault();
-  installPrompt=event;
-  if(!standalone){
-    $("installPanel").classList.remove("installed");
-    installText("⬇ Install PRIME HR App","එක button එකෙන් phone එකේ Install confirmation එක open කරන්න.");
-  }
-});
-window.addEventListener("appinstalled",()=>{
-  installPrompt=null;
-  $("installPanel").classList.add("installed");
-  installText("✓ App Installed","දැන් PRIME HR App icon එක Phone Home Screen එකේ බලන්න.");
-  notify("PRIME HR Test app installed.");
-});
-$("installBtn").addEventListener("click",async()=>{
-  if(standalone){notify("App එක දැනටමත් install කරලා තියෙනවා.");return}
-  if(!installPrompt){showInstallGuide();return}
-  if(installInProgress)return;
-  // prompt() is called immediately within the actual user's click gesture.
-  const promptEvent=installPrompt;
-  installPrompt=null;
-  installInProgress=true;
-  $("installBtn").disabled=true;
-  try{
-    await promptEvent.prompt();
-    const choice=await promptEvent.userChoice;
-    if(choice&&choice.outcome==="accepted"){
-      installText("✓ Installation accepted","Phone Home Screen එකේ PRIME HR icon එක බලන්න.");
-      notify("Install approved. Open it from your Home Screen.");
-    }else{
-      installText("⬇ Install PRIME HR App","Browser එකේ install prompt එක cancel කළා. අවශ්‍ය නම් ආයෙත් උත්සාහ කරන්න.");
-    }
-  }catch(err){
-    installText("📲 Install App – Guide","Browser එකෙන් automatic install prompt එක ලබාගන්න බැරි වුණා.");
-    showInstallGuide();
-  }finally{
-    installInProgress=false;
-    $("installBtn").disabled=false;
-  }
-});
-$("closeHelp").addEventListener("click",()=>$("installHelp").close());
-$("installHelp").addEventListener("click",e=>{if(e.target===$("installHelp"))$("installHelp").close()});
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{}))}
-render();
-})();
-</script></body></html>
+
+<nav class="mobile-bottom-nav" aria-label="Quick navigation">
+  <button data-go="dashboard"><span>⌂</span>Home</button>
+  <button data-go="attendance"><span>◷</span>Attendance</button>
+  <button data-go="leave"><span>▤</span>Leave</button>
+  <button data-go="notices"><span>♧</span>Notices</button>
+  <button data-go="profile"><span>◉</span>Profile</button>
+</nav>
+<dialog id="location-dialog" class="dialog">
+ <div class="dialog-body">
+  <div class="location-hero">📍</div>
+  <h2>Enable location for attendance</h2>
+  <p>Your current GPS location and estimated accuracy are recorded <b>only when you check in or check out</b>, along with server time. Authorised HR/Admin staff can open the location in Maps. We do not continuously track your phone.</p>
+  <p class="fineprint">Location permission is controlled by your phone/browser. If you do not allow location, you can still browse HR services, but GPS attendance will be unavailable.</p>
+  <button type="button" class="btn primary wide" id="enable-location">Allow Location Access</button>
+  <button type="button" class="btn outline wide" id="later-location">Not now</button>
+  <p id="location-dialog-status" class="fineprint"></p>
+ </div>
+</dialog>
+<dialog id="quick-dialog" class="dialog">
+ <form class="dialog-body" id="quick-form"><div class="panel-head"><h3 id="quick-title">New record</h3><button type="button" class="close" data-close="quick-dialog">✕</button></div>
+ <div id="quick-fields"></div><button class="btn primary wide" type="submit">Save record</button>
+ </form>
+</dialog>
+<dialog id="employee-dialog" class="dialog"><form id="employee-form" class="dialog-body"><div class="panel-head"><h3 id="employee-modal-title">Employee</h3><button class="close" type="button" data-close="employee-dialog">✕</button></div><input type="hidden" name="id"><label>Staff code<input name="staff_code" required maxlength="40"></label><label>Full name<input name="full_name" required maxlength="180"></label><label>Email (must match a registered login to link)<input name="email" type="email" maxlength="254"></label><label>Designation<input name="designation" required maxlength="120"></label><label>Department<input name="department" maxlength="120"></label><label>Branch<select id="employee-branch" name="branch_id" required></select></label><label>Joining date<input name="joined_on" type="date"></label><label>Status<select name="status"><option value="active">Active</option><option value="on_leave">On leave</option><option value="exited">Exited</option></select></label><div class="button-row"><button class="btn primary" type="submit">Save employee</button><button type="button" class="btn outline" data-close="employee-dialog">Cancel</button></div></form></dialog>
+<dialog id="candidate-dialog" class="dialog"><form id="candidate-form" class="dialog-body"><div class="panel-head"><h3>Add candidate</h3><button class="close" type="button" data-close="candidate-dialog">✕</button></div><input type="hidden" name="id"><label>Candidate full name<input name="full_name" required maxlength="180"></label><label>Email<input type="email" name="email" maxlength="254"></label><label>Position<input name="position" required maxlength="160"></label><label>Branch<select id="candidate-branch" name="branch_id"></select></label><label>Stage<select name="stage"><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option></select></label><label>Notes<textarea name="notes" rows="3" maxlength="1000"></textarea></label><div class="button-row"><button class="btn primary" type="submit">Save candidate</button><button type="button" class="btn outline" data-close="candidate-dialog">Cancel</button></div></form></dialog>
+</body></html>
