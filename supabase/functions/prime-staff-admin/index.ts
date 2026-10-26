@@ -11,7 +11,12 @@ const str=(value:unknown,max=200):string=>String(value??"").trim().slice(0,max);
 const maybe=(value:unknown,max=200):string|null=>str(value,max)||null;
 const toMoney=(v:unknown):number|null=>{
  if(v===undefined||v===null||str(v)==="")return null;
- const n=Number(String(v).replace(/[, Rs]/gi,""));if(!Number.isFinite(n)||n<0||n>10000000000)throw Error("Invalid salary/allowance");
+ const text=String(v).trim()
+   .replace(/^\s*(?:LKR|Rs\.?)\s*/i,"")
+   .replace(/,/g,"")
+   .replace(/\/-$/,"").trim();
+ if(!/^\d+(?:\.\d{1,2})?$/.test(text))throw Error("Salary must be a valid amount, e.g. 30000 or Rs. 30,000.");
+ const n=Number(text);if(!Number.isFinite(n)||n<0||n>10000000000)throw Error("Invalid salary/allowance");
  return Math.round(n*100)/100;
 };
 const normalizeStaff=(s:unknown)=>{
