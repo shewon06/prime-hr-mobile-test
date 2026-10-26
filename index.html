@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="./config.js"></script>
-  <script defer src="./app.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script><script defer src="./app.js"></script>
 </head>
 <body>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -29,15 +29,15 @@
 <section id="auth-screen" class="auth-shell hidden">
   <div class="auth-brand"><div class="logo-mark">P<span>✦</span></div><h1>PRIME <em>HR NEXT LEVEL</em></h1><p>People · Performance · Progress</p><div class="auth-caption">A secure workforce hub for PRIME Agri Business &amp; Plantations</div></div>
   <div class="auth-card">
-    <span class="eyebrow">STAFF ACCESS</span><h2 id="auth-title">Welcome back</h2><p>Sign in with your approved employee account.</p>
+    <span class="eyebrow">STAFF ACCESS</span><h2 id="auth-title">Admin / HR Login</h2><p>Sign in with your approved Admin email. Employees use Employee Number on their mobile portal.</p>
     <form id="auth-form">
       <label for="auth-name" id="name-wrap" class="hidden">Full name<input id="auth-name" autocomplete="name" maxlength="120"></label>
       <label for="auth-email">Email address<input id="auth-email" type="email" autocomplete="email" required></label>
       <label for="auth-password">Password<input id="auth-password" type="password" autocomplete="current-password" required minlength="8"></label>
       <button class="btn primary wide" type="submit" id="auth-submit">Sign in</button>
     </form>
-    <button id="toggle-auth" class="link-button">New employee? Request an account</button>
-    <p class="fineprint">Registration does not grant HR access. An administrator must approve every account.</p>
+    <button id="toggle-auth" class="link-button hidden" type="button" disabled>No employee self-registration</button><p><a href="./employee.html" class="btn outline">Open Employee Mobile App →</a></p>
+    <p class="fineprint">Employee accounts are created only through the Admin Staff Accounts / Excel panel.</p>
   </div>
 </section>
 <section id="pending-screen" class="auth-shell hidden">
@@ -50,7 +50,7 @@
     <div class="sidebar-caption">WORKSPACE</div>
     <nav id="nav">
       <button data-view="dashboard" class="nav-item active"><span>▦</span> Overview</button>
-      <button data-view="employees" class="nav-item hr-only"><span>♙</span> Employees</button>
+      <button data-view="employees" class="nav-item hr-only"><span>♙</span> Employees</button><button data-view="staff-import" class="nav-item admin-only"><span>⇧</span> Staff Accounts & Excel</button>
       <button data-view="attendance" class="nav-item"><span>◷</span> Attendance</button>
       <button data-view="locations" class="nav-item hr-only"><span>⌖</span> GPS Attendance</button>
       <button data-view="leave" class="nav-item"><span>▤</span> Leave requests</button>
@@ -60,7 +60,7 @@
       <button data-view="kpi" class="nav-item hr-only"><span>▥</span> Sales KPI</button>
       <button data-view="assets" class="nav-item hr-only"><span>▱</span> Assets</button>
       <button data-view="letters" class="nav-item hr-only"><span>▤</span> Letter Register</button>
-      <button data-view="accounts" class="nav-item admin-only"><span>⚙</span> User access</button>
+      <button data-view="accounts" class="nav-item admin-only"><span>⚙</span> Admin Access</button>
       <div class="nav-divider"></div>
       <button data-view="roadmap" class="nav-item"><span>✦</span> Future modules</button>
     </nav>
@@ -81,9 +81,17 @@
         <article class="panel"><div class="panel-head"><h3>Quick actions</h3></div><div class="quick-grid"><button data-go="attendance" class="quick">◷<b>Mark attendance</b><small>Record a secure check-in</small></button><button data-go="leave" class="quick">▤<b>Apply for leave</b><small>Track request status</small></button><button data-go="employees" class="quick hr-only">♙<b>Employee records</b><small>Manage staff directory</small></button></div></article>
       </section>
       <section id="view-employees" class="view hidden">
-        <div class="panel"><div class="panel-head"><h3>Employee directory</h3><button class="btn primary" id="employee-add">+ Add employee</button></div><div class="toolbar"><input id="employee-search" placeholder="Search by name, staff code, or branch"><button class="btn outline" id="employee-export">Export CSV</button></div><div class="table-scroll"><table><thead><tr><th>Staff code</th><th>Employee</th><th>Designation</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody id="employee-rows"></tbody></table></div></div>
+        <div class="panel"><div class="panel-head"><h3>Employee directory</h3><button class="btn primary admin-only" id="employee-add">+ Create Employee Account</button></div><div class="toolbar"><input id="employee-search" placeholder="Search by name, staff code, or branch"><button class="btn outline" id="employee-export">Export CSV</button></div><div class="table-scroll"><table><thead><tr><th>Staff code</th><th>Employee</th><th>Designation</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody id="employee-rows"></tbody></table></div></div>
       </section>
-      <section id="view-attendance" class="view hidden">
+      <section id="view-staff-import" class="view hidden">
+ <article class="panel"><div class="panel-head"><h3>Staff Accounts & Excel Import</h3><span class="pill approved">ADMIN ONLY</span></div><p>All employee logins are issued by Admin. Staff sign in using <b>Employee Number + Password</b>, not email. Excel import creates each staff member and their login.</p>
+ <div class="button-row"><button class="btn primary" id="staff-new-open">+ Add One Staff</button><button class="btn outline" id="staff-template">↓ Excel Template</button><button class="btn outline" id="staff-refresh">↻ Refresh</button></div></article>
+ <div class="split"><article class="panel"><div class="panel-head"><h3>Import Existing Excel</h3></div><p class="muted">Upload .xlsx, .xls or .csv. Required columns: staff_code (or employee_no), full_name, designation, branch. Phone, salary, NIC, bank and other master details are optional.</p>
+ <label>Choose Employee File<input type="file" id="staff-file" accept=".xlsx,.xls,.csv,text/csv"></label><p class="fineprint" id="staff-file-status">Select an Excel file to preview.</p><div id="staff-preview" class="table-scroll"></div><div class="button-row"><button id="staff-import-btn" class="btn primary" disabled>Import All Staff & Create Logins</button><button id="staff-clear" class="btn outline">Clear</button></div><div id="staff-import-status" class="tip">The Excel file stays in your browser. Valid rows are submitted through an Admin-only secured function.</div></article>
+ <article class="panel"><div class="panel-head"><h3>New Login Credentials</h3><button class="btn outline" id="staff-credentials-download" disabled>↓ Download Once</button></div><p class="fineprint">Temporary passwords are returned only once and must be shared privately with each employee. Do not forward the full password list to staff groups. Employee must change their password at first login.</p><div class="table-scroll"><table><thead><tr><th>Employee No.</th><th>Name</th><th>Result</th><th>Temporary Password</th></tr></thead><tbody id="staff-import-results"></tbody></table></div></article></div>
+ <article class="panel"><div class="panel-head"><h3>Manage Employee Logins</h3></div><div class="toolbar"><input id="staff-account-search" placeholder="Search by employee number, name, phone"></div><div class="table-scroll"><table><thead><tr><th>Employee No.</th><th>Name</th><th>Phone</th><th>Login</th><th>Actions</th></tr></thead><tbody id="staff-account-rows"></tbody></table></div></article>
+ </section>
+ <section id="view-attendance" class="view hidden">
         <div class="split"><article class="panel"><div class="panel-head"><h3>My attendance</h3><span class="pill" id="attendance-state">NOT CHECKED IN</span></div><p id="attendance-info" class="muted">Attendance uses secure server timestamps (Sri Lanka local work date).</p><div class="button-row"><button class="btn primary" id="checkin">Check in</button><button class="btn outline" id="checkout">Check out</button></div><label class="mode-picker">Work location
             <select id="attendance-mode"><option value="office">Office</option><option value="field">Field / Customer Visit</option></select>
             </label>
@@ -165,6 +173,7 @@
  <div id="quick-fields"></div><button class="btn primary wide" type="submit">Save record</button>
  </form>
 </dialog>
-<dialog id="employee-dialog" class="dialog"><form id="employee-form" class="dialog-body"><div class="panel-head"><h3 id="employee-modal-title">Employee</h3><button class="close" type="button" data-close="employee-dialog">✕</button></div><input type="hidden" name="id"><label>Staff code<input name="staff_code" required maxlength="40"></label><label>Full name<input name="full_name" required maxlength="180"></label><label>Email (must match a registered login to link)<input name="email" type="email" maxlength="254"></label><label>Designation<input name="designation" required maxlength="120"></label><label>Department<input name="department" maxlength="120"></label><label>Branch<select id="employee-branch" name="branch_id" required></select></label><label>Joining date<input name="joined_on" type="date"></label><label>Status<select name="status"><option value="active">Active</option><option value="on_leave">On leave</option><option value="exited">Exited</option></select></label><div class="button-row"><button class="btn primary" type="submit">Save employee</button><button type="button" class="btn outline" data-close="employee-dialog">Cancel</button></div></form></dialog>
+<dialog id="staff-add-dialog" class="dialog"><form id="staff-add-form" class="dialog-body"><div class="panel-head"><h3>Add Employee & Login</h3><button class="close" type="button" data-close="staff-add-dialog">✕</button></div><label>Employee Number<input name="staff_code" required maxlength="25" placeholder="M010 / EMP001"></label><label>Full Name<input name="full_name" required maxlength="180"></label><label>Phone Number<input name="phone" maxlength="45" placeholder="077XXXXXXX"></label><label>Designation<input name="designation" required maxlength="120"></label><label>Department<input name="department" maxlength="120"></label><label>Branch<select id="staff-add-branch" name="branch" required></select></label><label>Joining Date<input name="joined_on" type="date"></label><button class="btn primary wide" type="submit">Create Employee & Login</button></form></dialog>
+<dialog id="employee-dialog" class="dialog"><form id="employee-form" class="dialog-body"><div class="panel-head"><h3 id="employee-modal-title">Employee</h3><button class="close" type="button" data-close="employee-dialog">✕</button></div><input type="hidden" name="id"><label>Employee Number (fixed after account creation)<input name="staff_code" readonly required maxlength="40"></label><label>Full name<input name="full_name" required maxlength="180"></label><label>Phone Number<input name="phone" type="tel" maxlength="45"></label><label>Designation<input name="designation" required maxlength="120"></label><label>Department<input name="department" maxlength="120"></label><label>Branch<select id="employee-branch" name="branch_id" required></select></label><label>Joining date<input name="joined_on" type="date"></label><label>Status<select name="status"><option value="active">Active</option><option value="on_leave">On leave</option><option value="exited">Exited</option></select></label><div class="button-row"><button class="btn primary" type="submit">Save employee</button><button type="button" class="btn outline" data-close="employee-dialog">Cancel</button></div></form></dialog>
 <dialog id="candidate-dialog" class="dialog"><form id="candidate-form" class="dialog-body"><div class="panel-head"><h3>Add candidate</h3><button class="close" type="button" data-close="candidate-dialog">✕</button></div><input type="hidden" name="id"><label>Candidate full name<input name="full_name" required maxlength="180"></label><label>Email<input type="email" name="email" maxlength="254"></label><label>Position<input name="position" required maxlength="160"></label><label>Branch<select id="candidate-branch" name="branch_id"></select></label><label>Stage<select name="stage"><option>Applied</option><option>Screening</option><option>Interview</option><option>Offer</option><option>Hired</option><option>Rejected</option></select></label><label>Notes<textarea name="notes" rows="3" maxlength="1000"></textarea></label><div class="button-row"><button class="btn primary" type="submit">Save candidate</button><button type="button" class="btn outline" data-close="candidate-dialog">Cancel</button></div></form></dialog>
 </body></html>

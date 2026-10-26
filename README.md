@@ -1,65 +1,57 @@
-# PRIME HR NEXT LEVEL — PRIME Agri Business & Plantations
+# PRIME HR NEXT LEVEL — Admin Web + Employee Mobile
 
-This repository supersedes the standalone installation test. It contains cloud-connected frontend source for an online HR employee and management application.
+Built for PRIME Agri Business & Plantations (Pvt.) Ltd.
 
-## Coded modules
-- User registration/login with HR approval and role-based access
-- Employee master, branch register, CSV export
-- Foreground GPS attendance check-in/out with server-side time and Sri Lanka work dates
-- Admin/HR GPS attendance map links and location CSV report
-- Leave applications and HR approvals
-- Recruitment register, company notices and employee acknowledgements
-- Sales KPI, assets and HR letter issuance register
-- Mobile-friendly Progressive Web App (PWA)
+**Admin Web Portal:** application root `/`
+**Employee Mobile Portal:** `/employee.html` (PWA installed on Home Screen opens here)
 
-## GPS privacy behavior
-The first time an ACTIVE, LINKED employee opens the app, it shows a clear description and **Allow Location Access** button. The browser/phone then asks for explicit consent; the website cannot grant itself permission. A fresh GPS position is collected ONLY when the employee taps Check In / Check Out. HR/Admin can view that snapshot, the server timestamp, and its reported accuracy. There is no continuous background tracking, no watchPosition, and no location history collection outside attendance actions. Without GPS permission or if reported accuracy exceeds 1 km, attendance submission is rejected; a controlled manual correction workflow remains to be developed. Phone/browser GPS coordinates can be spoofed, so this is not guaranteed proof of physical presence.
+## Employee Number login — no staff email needed
+All employee accounts must be created by an approved Administrator. Employees have NO self-registration or email entry. The admin provisions the employee number (case insensitive), phone, name, designation, branch and other HR master data. Password login is internally implemented with Supabase Auth and a non-deliverable synthetic email; that internal technical identifier is never requested from employees.
 
-## Supabase project CREATED and core database activated (26 Oct 2026)
-- Project name: Prime HR Next Level
-- Project reference: qkhcojaouueypkgrzlov
-- Region: ap-south-1
-- Status: ACTIVE_HEALTHY at setup
-- schema.sql applied as migration: prime_hr_next_level_initial_schema
-- Extra foreign-key indexes applied as migration: prime_hr_foreign_key_indexes
-- Frontend config.js now points to this project using a PUBLIC publishable key.
-- RLS enabled on all 13 application tables and 31 policies added.
-- Database starts with zero registered accounts and no private staff records.
-- No FIRST ADMIN registered/approved yet; production readiness and company-wide rollout still pending.
+Approved admins use their existing email/password to open the Web Admin portal.
+Staff use their EMPLOYEE NUMBER and PASSWORD in the Mobile App.
 
-## Important: Backend activation is not FULLY finished
-The Supabase project and initial schema are now online, and config.js contains the correct public project URL and publishable key. The website can display a login/signup screen once Netlify deploys the GitHub changes. No administrator has been registered or approved. Real employee access and data collection must wait for testing, privacy/retention safeguards and company authorization.
+## Admin Excel Import
+1. Open the Admin web address (root of your Netlify-hosted site) and sign in as Admin.
+2. Choose **Staff Accounts & Excel**.
+3. Download the template, or import an existing Excel (.xlsx/.xls) or CSV file.
+4. Required columns: `staff_code` (or `employee_no`), `full_name`, `designation`, `branch`.
+5. Supported optional fields: `phone`, `department`, `joined_on`, `status`, `national_id`, `address`, `date_of_birth`, `emergency_contact`, `employment_type`, `bank_name`, `bank_branch`, `bank_account`, `epf_no`, `etf_no`, `basic_salary`, `vehicle_allowance`.
+6. Preview staff entries and press **Import All Staff & Create Logins**.
+7. The Admin-only Supabase Edge Function processes batches of 25. On first creation it returns a cryptographically generated one-time temporary password per employee.
+8. Download the new credentials CSV once and hand the correct individual password **privately** to each employee. Never share the group password list in a chat group or upload it to GitHub.
+9. On an existing staff number, re-import updates master details without resetting passwords. The Admin can separately reset a staff password, disable or enable login.
 
-Deployment checklist:
-1. DONE: organisation project created ($0/month quoted for initial Free Plan), schema applied and public connection configured.
-2. Verify privacy notice, location consent, HR access scope, data retention/deletion period and applicable employment obligations.
-3. DONE: schema applied. NEXT: perform RLS integration checks with at least two separate staff users and separate HR/Admin accounts.
-4. DONE: public Supabase project URL and publishable key configured in config.js. NEVER upload secret/service_role keys, DB passwords or employee files to a public repository.
-5. Configure email verification, secure SMTP, proper site URLs, MFA for admins and backup/incident response.
-6. Create/verify first administrator's account and authorize it in Supabase SQL Editor using a company-approved verified email:
+Employee numbers must be 2–25 characters, letters/digits plus `_` and `-`. They are immutable once linked to an Auth identity.
 
-    UPDATE public.profiles SET role='admin',is_active=true
-    WHERE email=lower('FIRST_ADMIN@YOUR_COMPANY.COM');
+The mobile app forces a password change the first time a staff member signs in using their temporary password, using a secured server-side action with current-password verification.
 
-7. Activate approved staff accounts, create matching employee records and test the app before any real company-wide rollout.
+## Modules
+- Employee Master and secure account management
+- GPS Check In / Check Out, field or office mode and authoritative server time
+- GPS attendance report and Maps links visible only to authorized HR/Admin
+- Leave applications and HR approval/rejection
+- Recruitment pipeline and branch master
+- Company notices, acknowledgements
+- KPI tracker, Asset Register, HR Letter Register
+- Mobile-first Employee Portal with Employee Number login
+- Responsive Admin Web Portal, with HR role protections
 
-## Current limitations and remaining work
-- Payroll (EPF, ETF, APIT, payslips and bank exports) is NOT implemented.
-- Appointment letter templates/auto generation need the exact approved company clauses; only a metadata Letter Register exists.
-- Bulk employee CSV import is not implemented, although CSV export exists.
-- Formal GPS retention deletion automation, audit reports, device attestation, spoof detection, geofencing, and manual attendance adjustment need implementation.
-- Native Play Store / App Store packages and push notifications are not implemented.
-- The official PRIME gold logo is not included; the app currently uses a P placeholder.
+## Security
+- Public web app only contains a Supabase **publishable** API key, never service_role or private passwords.
+- Staff accounts are created and reset by a privileged **prime-staff-admin** Edge Function, which validates a currently verified Supabase Auth user and checks `public.profiles.role='admin'` + `is_active=true` server-side.
+- Employee data stored in Supabase tables protected by RLS, not in the public GitHub repo.
+- Passwords are generated with crypto secure randomness; only the hashed Supabase Auth password is stored on the server. Temporary passwords displayed to Admin are not saved to the database.
+- GPS acquired through browser geolocation on check-in and check-out only, with browser consent. No continuous location monitoring.
+- The staff master stores phone number only as contact information. Not used for login or public contact discovery.
+- Disable public Auth signups in the Supabase dashboard for fully closed registration; the web UI does not offer public registration.
+- Do an independent security/privacy review before actual personnel data, NIC, bank account or salary data is uploaded. GPS retention, legal staff notices and internal data access policy require employer approval.
 
-## Hosting
-Code is hosted in GitHub at shewon06/prime-hr-mobile-test. If a Netlify site already imports this repo, pushes to main can trigger automatic builds. The exact active Netlify/custom-domain URL must be checked in the user's Netlify dashboard. Existing WON MART hosting is not modified. The service worker caches ONLY public app files, never employee records or API data.
+## Limitations / company rollout requirements
+This is a working code release, but NOT yet independently end-to-end tested with real Admin+Employee credentials. Check Edge Function execution, Auth delivery settings, Excel mapping, role isolation, actual Android/iOS GPS and Netlify deploy first. Employee password cannot be recovered; Admin resets it. Supabase email confirmation for new employee synthetic emails is bypassed by verified server-side account creation, not by public registration.
 
-This is a development release. Do not collect actual GPS or HR personal records until the backend, permissions, data handling, backups, and security checks are finished.
+**Not finished:** compliant payroll EPF/ETF/APIT/OT calculations, monthly payslips, bank files, approved appointment-letter generation, bulk appointment print templates, automatic GPS deletion/retention and manual attendance exceptions. The letter register is currently metadata, not legal-document generation.
 
-## Supabase confirmation email redirects (important)
-Before inviting any staff, go to [Authentication → URL Configuration](https://supabase.com/dashboard/project/qkhcojaouueypkgrzlov/auth/url-configuration) in Supabase.
-- **Site URL:** replace the default `http://localhost:3000` with the EXACT production HTTPS root URL shown by your Netlify dashboard or your verified custom domain.
-- **Redirect URLs:** add that exact HTTPS URL including any trailing path you deploy under (e.g. the app root).
-- The frontend signup code passes `emailRedirectTo` derived from its own browser URL; Supabase must permit that URL in Redirect URLs.
-- Do not use a localhost URL for production email confirmation; the confirmation action can succeed while the browser subsequently fails to open localhost.
-- After changing the redirect settings, test with a different newly registered employee (with no real personal details) before rollout. Previously created links keep their original redirect destination.
+You can configure a company-owned domain for the Netlify site. Existing WON MART site and domain DNS were not changed.
+
+Project: Supabase ref `qkhcojaouueypkgrzlov`, India Mumbai region. Public sources are in this repository; service-role secrets are injected by Supabase Edge environment only.

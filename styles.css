@@ -26,3 +26,18 @@ input,select,textarea{background:#fff;width:100%;border:1px solid #dae6df;border
  .topbar .top-actions{gap:7px}.topbar #logout{padding:8px}
  .profile-field{font-size:12px}
 }
+
+
+/* Staff provisioning tools — restricted to Admin UI */
+#view-staff-import .panel{margin-bottom:17px}
+#staff-preview{max-height:280px;overflow:auto;margin:12px 0}
+#staff-import-results code{font-size:11px;font-weight:700;white-space:nowrap;user-select:all}
+#staff-import-status{font-size:12px;line-height:1.7;margin-top:13px}
+#staff-account-rows .btn{margin:3px;white-space:nowrap}
+#staff-credentials-download:disabled{opacity:.4}
+#staff-account-search{max-width:420px}
+#staff-add-dialog .dialog-body{max-height:86dvh;overflow:auto}
+#view-staff-import .split{align-items:start}
+#view-staff-import input[type=file]{width:100%;max-width:420px;padding:12px;border:1px dashed #a6beaa;border-radius:10px;background:#f7faf8;margin-top:9px}
+#view-staff-import .table-scroll{overflow:auto}
+@media(max-width:900px){#view-staff-import .button-row{flex-wrap:wrap}#view-staff-import .split{display:grid;grid-template-columns:minmax(0,1fr)}}
