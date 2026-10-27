@@ -12,6 +12,15 @@
 .nav{position:fixed;left:0;bottom:0;right:0;display:flex;padding:8px 6px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #dce8dc;z-index:20;box-shadow:0 -2px 18px #17442a10}.nav button{flex:1;border:0;background:none;color:#718676;font-size:11px;font-weight:760;display:grid;gap:3px;justify-items:center}.nav button span{font-size:21px}.nav button.active{color:#17643e}.notice{border:1px solid #e3ece4;border-radius:12px;padding:13px;margin-top:9px;background:#fbfdfb}.notice h3{margin:0 0 5px}.error{border:1px solid #ebc7c7;background:#fff3f0;color:#8d3535;padding:10px;border-radius:10px;font-size:12px;line-height:1.5}.success{border:1px solid #bfe5cb;background:#effaf0;color:#286d40;padding:10px;border-radius:10px;font-size:12px}.badgebox{padding:16px;background:#eef5ee;border-radius:14px;font-size:12px;color:#5b745f}.gps{padding:12px;border-radius:12px;background:#f1f8f3;border:1px solid #cfe2d1;font-size:12px;color:#466d50}.gps h3{color:#225a3a;margin:0 0 5px}
 #toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99;background:#143a2c;color:#fff;border-radius:10px;padding:12px 18px;font-size:12px;max-width:90vw;box-shadow:0 12px 28px #123a2c30;display:none}#toast.show{display:block}
 @media(min-width:760px){.top{border-radius:20px}.shell{margin:25px auto;box-shadow:0 5px 30px #173f2710;border-radius:22px;background:#f5f8f5}}
+
+/* New HR Notices appear as an in-app popup while the Employee App is visible. */
+#hrNoticePopup{width:min(92vw,460px);max-height:min(80dvh,680px);overflow-y:auto;border:1px solid #c7dfcc;border-radius:20px;background:#fff;color:#173b2b;box-shadow:0 20px 65px #052e1d55;padding:23px}
+#hrNoticePopup::backdrop{background:#0827189e;backdrop-filter:blur(3px)}
+#hrNoticePopup .notice-icon{font-size:35px;line-height:1;margin:3px 0 15px}
+#hrNoticePopup h2{font-size:21px;line-height:1.25;margin:0 0 12px;color:#135336}
+#hrNoticePopup .notice-copy{max-height:38dvh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:14px;margin:9px 0 19px}
+#hrNoticePopup .notice-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#hrNoticePopup .notice-actions button{min-width:0}
 </style>
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4"></script><script defer src="./config.js"></script><script defer src="./employee.js"></script></head>
 <body><div id="toast" role="status"></div><div class="shell">
@@ -49,4 +58,15 @@
 <section id="pageNotices" class="page hidden"><section class="panel"><h2>📣 Company HR Notices</h2><div id="noticeList"></div></section></section>
 <section id="pageProfile" class="page hidden"><section class="panel"><h2>👤 My Profile</h2><div id="profileList"></div><button id="changePasswordButton" class="btn outline wide" style="margin-top:12px">Change My Password</button><p class="soft" style="text-align:center;font-size:11px;margin-top:19px;margin-bottom:0">© 2026 WON DEV. All Rights Reserved.</p></section><section class="panel"><h3>Attendance Location & Privacy</h3><p class="soft">Your phone asks for location permission. Your location is saved only when you Check In, start Field Duty, or Check Out, not when you sign in, and can be viewed by authorised HR/Admin. No background tracking.</p></section></section>
 <nav class="nav"><button data-screen="home" class="active"><span>⌂</span>Home</button><button data-screen="attendance"><span>◷</span>Attend</button><button data-screen="leave"><span>▤</span>Leave</button><button data-screen="alerts"><span>🔔</span>Alerts <span id="navUnreadCount" class="chip hidden">0</span></button><button data-screen="notices"><span>♧</span>Notices</button><button data-screen="profile"><span>◉</span>Profile</button></nav>
-</div></div></body></html>
+</div></div>
+<dialog id="hrNoticePopup" aria-labelledby="hrPopupTitle" aria-describedby="hrPopupBody">
+  <div class="notice-icon" aria-hidden="true">🔔</div>
+  <p class="soft" style="font-weight:800;letter-spacing:1px;margin:0 0 7px;color:#167244">NEW HR NOTICE</p>
+  <h2 id="hrPopupTitle">HR Notice</h2>
+  <div id="hrPopupBody" class="notice-copy"></div>
+  <div class="notice-actions">
+    <button class="btn outline" id="hrPopupLater" type="button">Later</button>
+    <button class="btn primary" id="hrPopupOpen" type="button">View Notice</button>
+  </div>
+</dialog>
+</body></html>
