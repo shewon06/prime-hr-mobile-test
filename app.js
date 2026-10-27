@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
-  const state = {client:null,user:null,profile:null,view:"dashboard",branches:[],employees:[],attendance:[],leaves:[],candidates:[],profiles:[],locations:[],fieldReports:[],notices:[],reads:[],kpis:[],assets:[],letters:[],signup:false,loading:false,gpsBusy:false,staffUploadRows:[],staffCredentials:[],staffImportProgress:false};
+  const state = {client:null,user:null,profile:null,view:"dashboard",branches:[],employees:[],attendance:[],leaves:[],candidates:[],profiles:[],locations:[],fieldReports:[],payroll:[],entitlements:[],letterTemplates:[],letterDrafts:[],notices:[],reads:[],kpis:[],assets:[],letters:[],signup:false,loading:false,gpsBusy:false,staffUploadRows:[],staffCredentials:[],staffImportProgress:false};
   const nameOf = e => e ? e.full_name : "Unknown employee";
   const esc = input => String(input ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const dateText = s => s ? new Date(s + (String(s).length===10?"T12:00:00":"")).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Colombo"}) : "—";
@@ -107,6 +107,12 @@
       if(isHR())all.push(state.client.from("field_activity_reports")
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
+      if(isHR()){
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,gross_pay,net_pay,status,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_leave_entitlements").select("id,employee_id,leave_year,leave_type,entitled_days,carried_days,notes").limit(2000));
+       all.push(state.client.from("hr_letter_templates").select("id,template_name,designation_match,language,subject,body,status,version,updated_at").order("template_name").limit(300));
+       all.push(state.client.from("hr_letter_drafts").select("id,template_id,employee_id,document_no,template_version,subject,rendered_body,status,created_at,issued_at").order("created_at",{ascending:false}).limit(600));
+      }
       const result=await Promise.all(all);
       for(const r of result)if(r.error)throw r.error;
       [state.branches,state.employees,state.attendance,state.leaves]=result.slice(0,4).map(r=>r.data||[]);
@@ -120,6 +126,10 @@
       state.assets=result[at++].data||[];
       state.letters=result[at++].data||[];
       state.fieldReports=isHR()?result[at++].data||[]:[];
+      state.payroll=isHR()?result[at++].data||[]:[];
+      state.entitlements=isHR()?result[at++].data||[]:[];
+      state.letterTemplates=isHR()?result[at++].data||[]:[];
+      state.letterDrafts=isHR()?result[at++].data||[]:[];
       renderAll();
     } catch(err){console.error("Data access error",err);toast("Unable to load HR data: "+normalizeErr(err),true)}
     finally{state.loading=false}
@@ -135,15 +145,16 @@
     $("branch-list").innerHTML=state.branches.length?state.branches.map(b=>'<div><b>'+esc(b.name)+'</b><span>'+state.employees.filter(e=>e.branch_id===b.id).length+' employees</span></div>').join(""):"No branches set up";
     renderEmployees();renderAttendance();renderLeave();renderCandidates();renderAccounts();
     renderLocations();renderFieldReports();renderNotices();renderProfile();renderKpi();renderAssets();renderLetters();renderStaffAccounts();
+    if(isHR()){renderPayroll();renderLeaveBalances();renderLetterTemplates();renderLetterDrafts();renderOperationsSummary()}
   }
   function switchView(view) {
-    if(["employees","recruitment","locations","field-work","kpi","assets","letters"].includes(view)&&!isHR())return toast("HR access required.",true);
+    if(["employees","recruitment","locations","field-work","kpi","assets","letters","payroll"].includes(view)&&!isHR())return toast("HR access required.",true);
     if(["accounts","staff-import"].includes(view)&&!isAdmin())return toast("Administrator access required.",true);
     if(!$( "view-"+view))return;
     state.view=view;
     document.querySelectorAll(".view").forEach(el=>el.classList.toggle("hidden",el.id!=="view-"+view));
     document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
+    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],payroll:["FINANCE & HR","Monthly Payroll","Draft calculations with Admin approval and payment confirmation."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
     const t=titles[view];
     $("page-eyebrow").textContent=t[0];$("page-title").textContent=t[1];$("page-subtitle").textContent=t[2];$("crumb-label").textContent=t[1];
     document.querySelector(".sidebar").classList.remove("open");
@@ -200,7 +211,7 @@
     $("attendance-state").textContent=!self?"NOT LINKED":record?(record.check_out?"COMPLETED":"CHECKED IN"):"NOT CHECKED IN";
     $("checkin").disabled=!self||!!record;
     $("checkout").disabled=!self||!record||!!record.check_out;
-    const rows=state.attendance.filter(a=>isHR()||a.employee_id===self?.id);
+    const rows=filteredAttendance();
     $("attendance-rows").innerHTML=rows.map(a=>'<tr><td>'+esc(employeeName(a.employee_id))+'</td><td>'+esc(dateText(a.work_date))+'</td><td>'+esc(timeText(a.check_in))+'</td><td>'+esc(timeText(a.check_out))+'</td><td>'+esc(a.mode)+'</td></tr>').join("")||empty(5,"No attendance history available");
     $("attendance-summary").textContent=(isHR()?"Company-wide: ":"Your records: ")+state.attendance.filter(a=>a.work_date===today).length+" check-ins recorded for "+dateText(today)+".";
   }
@@ -700,6 +711,384 @@
     }
   }
 
+
+  // All finance and HR workflows are guarded again in Supabase Row Level Security.
+  function optionsForEmployees(current=""){
+    return '<option value="">Select employee</option>'+state.employees.map(e=>'<option value="'+esc(e.id)+'" '+(e.id===current?'selected':'')+'>'+esc(e.staff_code+" · "+e.full_name)+'</option>').join("");
+  }
+  function ensureEmployeeDropdown(id){
+    const el=$(id),value=el.value;
+    const keys=state.employees.map(e=>e.id).join(",");
+    if(el.dataset.staffList!==keys){
+      el.innerHTML=optionsForEmployees(value);
+      el.dataset.staffList=keys;
+    }
+  }
+  const payrollKeys=["basic_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
+  function payrollFormTotals(){
+    const f=$("payroll-form");
+    const num=n=>Number(formValue(f,n)||0);
+    const gross=num("basic_pay")+num("allowance_pay")+num("overtime_pay")+num("other_earnings");
+    const net=gross-num("employee_epf")-num("income_tax")-num("other_deductions");
+    $("payroll-live-summary").textContent="Gross: "+money(gross)+" · Net: "+money(net)+" · Employer EPF/ETF costs: "+money(num("employer_epf")+num("employer_etf"));
+  }
+  function fillPayrollFromMaster(){
+    const f=$("payroll-form");
+    const e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
+    if(!e)return;
+    const month=formValue(f,"period");
+    const existing=state.payroll.find(x=>x.employee_id===e.id&&x.period_month.slice(0,7)===month);
+    if(existing){
+      for(const key of payrollKeys)setFormValue(f,key,Number(existing[key]));
+      setFormValue(f,"notes",existing.notes||"");
+      $("payroll-form").querySelector('button[type="submit"]').disabled=existing.status!=="draft";
+      $("payroll-form").querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
+    }else{
+      f.querySelector('button[type="submit"]').disabled=false;
+      f.querySelector('button[type="submit"]').textContent="Save / Update Draft Payroll";
+      payrollKeys.forEach(k=>setFormValue(f,k,k==="basic_pay"?Number(e.basic_salary||0):k==="allowance_pay"?Number(e.vehicle_allowance||0):0));
+      setFormValue(f,"notes","");
+    }
+    payrollFormTotals();
+  }
+  function filteredPayroll(){
+    const m=$("payroll-period-filter").value,status=$("payroll-status-filter").value;
+    return state.payroll.filter(x=>(!m||x.period_month.startsWith(m))&&(!status||x.status===status));
+  }
+  function renderPayroll(){
+    if(!isHR())return;
+    ensureEmployeeDropdown("payroll-employee");
+    if(!$("payroll-month").value)$("payroll-month").value=localDate().slice(0,7);
+    const rows=filteredPayroll();
+    const gross=rows.reduce((n,x)=>n+Number(x.gross_pay),0);
+    const net=rows.reduce((n,x)=>n+Number(x.net_pay),0);
+    $("payroll-totals").textContent="Records: "+rows.length+" · Gross: "+money(gross)+" · Net: "+money(net)+" · Approval is required before marking paid.";
+    $("payroll-rows").innerHTML=rows.map(x=>{
+      let actions='<button class="btn tiny outline" data-payroll-print="'+esc(x.id)+'">Payslip Preview</button>';
+      if(isAdmin()&&x.status==="draft")actions+=' <button class="btn tiny" data-payroll-action="approved" data-payroll-id="'+esc(x.id)+'">Approve</button>';
+      if(isAdmin()&&x.status==="approved")actions+=' <button class="btn tiny primary" data-payroll-action="paid" data-payroll-id="'+esc(x.id)+'">Mark Paid</button>';
+      return '<tr><td>'+esc(employeeName(x.employee_id))+'</td><td>'+esc(x.period_month.slice(0,7))+'</td><td>'+esc(money(x.gross_pay))+'</td><td>'+esc(money(x.net_pay))+'</td><td>'+fmtStatus(x.status)+'</td><td>'+actions+'</td></tr>';
+    }).join("")||empty(6,"No payroll records found.");
+    payrollFormTotals();
+  }
+  async function savePayroll(ev){
+    ev.preventDefault();if(!isHR())return;
+    const f=ev.target,employee_id=formValue(f,"employee_id"),month=formValue(f,"period");
+    if(!employee_id||!/^\d{4}-\d{2}$/.test(month))return toast("Choose an employee and valid month.",true);
+    const values={};
+    for(const key of payrollKeys){
+      const raw=formValue(f,key);
+      if(raw===""||!Number.isFinite(Number(raw))||Number(raw)<0)return toast("Check non-negative amount: "+key,true);
+      values[key]=Math.round(Number(raw)*100)/100;
+    }
+    const gross=values.basic_pay+values.allowance_pay+values.overtime_pay+values.other_earnings;
+    const deductions=values.employee_epf+values.income_tax+values.other_deductions;
+    if(deductions>gross)return toast("Deductions cannot exceed gross earnings.",true);
+    const record={...values,employee_id,period_month:month+"-01",notes:formValue(f,"notes").trim()||null};
+    const prev=state.payroll.find(x=>x.employee_id===employee_id&&x.period_month===record.period_month);
+    if(prev&&prev.status!=="draft")return toast("Approved payroll is locked.",true);
+    const q=prev?state.client.from("hr_payroll_entries").update(record).eq("id",prev.id).eq("status","draft"):
+      state.client.from("hr_payroll_entries").insert({...record,status:"draft",created_by:state.user.id});
+    const {error}=await q;
+    if(error)return toast(normalizeErr(error),true);
+    toast("Payroll draft saved. Admin approval required.");await fetchData();
+  }
+  async function decidePayroll(id,newStatus){
+    if(!isAdmin())return;
+    const x=state.payroll.find(p=>p.id===id);
+    if(!x||!((x.status==="draft"&&newStatus==="approved")||(x.status==="approved"&&newStatus==="paid")))return;
+    if(!confirm((newStatus==="paid"?"Confirm payment was completed externally":"Approve manually verified payroll")+
+     " for "+employeeName(x.employee_id)+" "+x.period_month+"?"))return;
+    const {error,data}=await state.client.from("hr_payroll_entries").update({status:newStatus})
+     .eq("id",x.id).eq("status",x.status).select("id");
+    if(error||!data?.length)return toast(error?normalizeErr(error):"Record changed — refresh.",true);
+    toast("Payroll marked "+newStatus+".");await fetchData();
+  }
+  function printPayroll(id){
+    if(!isHR())return;
+    const x=state.payroll.find(p=>p.id===id);
+    if(!x)return;
+    const employee=state.employees.find(e=>e.id===x.employee_id);
+    const lines=[
+      ["Basic Salary",x.basic_pay],["Allowances",x.allowance_pay],["Overtime",x.overtime_pay],
+      ["Other Earnings",x.other_earnings],["Gross Pay",x.gross_pay],
+      ["Employee EPF",x.employee_epf],["APIT / Income Tax",x.income_tax],
+      ["Other Deductions",x.other_deductions],["Net Pay",x.net_pay],
+      ["Employer EPF (company cost)",x.employer_epf],["Employer ETF (company cost)",x.employer_etf]
+    ];
+    const html='<html><head><title>PRIME HR Payslip Preview</title><style>body{font:14px Arial,sans-serif;max-width:720px;margin:40px auto;color:#203527}h1{color:#16513a}table{width:100%;border-collapse:collapse}td{padding:10px;border-bottom:1px solid #ddd}td:last-child{text-align:right}.small{color:#666;font-size:12px}@media print{button{display:none}}</style></head><body>'+
+      '<h1>PRIME HR · Payroll Statement</h1><p><b>'+esc(employee?.full_name||"Employee")+'</b> · '+esc(employee?.staff_code||"")+'</p>'+
+      '<p>Period: '+esc(x.period_month.slice(0,7))+' · Status: <b>'+esc(x.status.toUpperCase())+'</b></p>'+
+      (x.status==="draft"?'<h2>UNAPPROVED DRAFT — NOT PROOF OF PAYMENT</h2>':x.status==="approved"?'<p>APPROVED — NOT PROOF OF PAYMENT</p>':'')+
+      '<table>'+lines.map(([label,value])=>'<tr><td>'+esc(label)+'</td><td>'+esc(money(value))+'</td></tr>').join("")+'</table>'+
+      '<p class="small">Manual calculations: verify EPF, ETF, APIT, tax rules and final figures independently. No bank transaction was initiated by PRIME HR.</p><button onclick="window.print()">Print / Save PDF</button></body></html>';
+    const w=window.open("","_blank");if(!w)return toast("Allow popup to view payslip.",true);
+    w.document.open();w.document.write(html);w.document.close();
+  }
+  function exportPayroll(){
+    if(!isHR())return;
+    const keys=["staff_code","employee","period_month",...payrollKeys,"gross_pay","net_pay","status","notes"];
+    const rows=filteredPayroll().map(x=>({
+     ...x,staff_code:state.employees.find(e=>e.id===x.employee_id)?.staff_code||"",
+     employee:employeeName(x.employee_id)
+    }));
+    staffCSV(rows,keys,"PRIME_Payroll_"+localDate()+".csv");
+  }
+
+
+
+  function filteredAttendance(){
+    const self=mine(),date=$("attendance-date-filter").value,team=$("attendance-team-filter").value;
+    return state.attendance.filter(a=>{
+      if(!isHR())return a.employee_id===self?.id;
+      const e=state.employees.find(x=>x.id===a.employee_id);
+      return (!date||a.work_date===date)&&(!team||e?.staff_group===team);
+    });
+  }
+  function exportAttendance(){
+    if(!isHR())return;
+    const rows=filteredAttendance().map(a=>({
+      staff_code:state.employees.find(e=>e.id===a.employee_id)?.staff_code||"",
+      employee_name:employeeName(a.employee_id),
+      team:state.employees.find(e=>e.id===a.employee_id)?.staff_group||"office",
+      work_date:a.work_date,check_in:a.check_in||"",check_out:a.check_out||"",mode:a.mode
+    }));
+    staffCSV(rows,["staff_code","employee_name","team","work_date","check_in","check_out","mode"],
+      "PRIME_Attendance_"+localDate()+".csv");
+  }
+
+  function calendarOverlapDays(start,end,year){
+    const from=Math.max(Date.parse(start+"T00:00:00Z"),Date.UTC(year,0,1));
+    const to=Math.min(Date.parse(end+"T00:00:00Z"),Date.UTC(year+1,0,1)-86400000);
+    return Number.isFinite(from)&&Number.isFinite(to)&&to>=from?Math.round((to-from)/86400000)+1:0;
+  }
+  function leaveBalanceRows(){
+    const year=Number($("balance-year").value)||new Date().getFullYear();
+    return state.entitlements.filter(x=>x.leave_year===year).map(x=>{
+      const approved=state.leaves.filter(l=>l.employee_id===x.employee_id&&l.kind===x.leave_type&&l.status==="approved")
+        .reduce((n,l)=>n+calendarOverlapDays(l.from_date,l.to_date,year),0);
+      return {
+        staff_code:state.employees.find(e=>e.id===x.employee_id)?.staff_code||"",
+        employee_name:employeeName(x.employee_id),
+        leave_type:x.leave_type,leave_year:x.leave_year,
+        entitled_days:x.entitled_days,carried_days:x.carried_days,
+        approved_calendar_days:approved,
+        remaining_calendar_days:Number(x.entitled_days)+Number(x.carried_days)-approved
+      };
+    });
+  }
+  function renderLeaveBalances(){
+    if(!isHR())return;
+    ensureEmployeeDropdown("entitlement-employee");
+    const year=new Date().getFullYear();
+    if(!$("balance-year").value)$("balance-year").value=String(year);
+    if(!$("entitlement-year").value)$("entitlement-year").value=String(year);
+    $("leave-balance-rows").innerHTML=leaveBalanceRows().map(r=>
+      '<tr><td>'+esc(r.employee_name)+' <span class="muted">'+esc(r.staff_code)+'</span></td><td>'+esc(r.leave_type)+'</td><td>'+r.leave_year+'</td><td>'+
+      (Number(r.entitled_days)+Number(r.carried_days))+'</td><td>'+r.approved_calendar_days+'</td><td>'+
+      (r.remaining_calendar_days<0?'<b style="color:#9b2d32">':'<b>')+r.remaining_calendar_days+'</b></td></tr>'
+    ).join("")||empty(6,"No company-approved leave entitlements entered for this year.");
+  }
+  async function saveEntitlement(ev){
+    ev.preventDefault();if(!isHR())return;
+    const f=ev.target;
+    const r={
+      employee_id:formValue(f,"employee_id"),
+      leave_year:Number(formValue(f,"leave_year")),
+      leave_type:formValue(f,"leave_type"),
+      entitled_days:Number(formValue(f,"entitled_days")),
+      carried_days:Number(formValue(f,"carried_days"))
+    };
+    if(!r.employee_id||r.leave_year<2020||r.leave_year>2100||[r.entitled_days,r.carried_days].some(x=>!Number.isFinite(x)||x<0||x>366))
+      return toast("Enter a valid staff member, year and approved entitlement.",true);
+    const {error}=await state.client.from("hr_leave_entitlements")
+      .upsert(r,{onConflict:"employee_id,leave_year,leave_type"});
+    if(error)return toast(normalizeErr(error),true);
+    toast("Leave entitlement updated.");await fetchData();
+  }
+  function exportLeaveBalances(){
+    if(!isHR())return;
+    staffCSV(leaveBalanceRows(),
+      ["staff_code","employee_name","leave_type","leave_year","entitled_days","carried_days","approved_calendar_days","remaining_calendar_days"],
+      "PRIME_Leave_Balances_"+$("balance-year").value+".csv");
+  }
+  function renderOperationsSummary(){
+    if(!isHR())return;
+    const groups={office:0,sales:0,plantation:0};
+    state.employees.filter(e=>e.status==="active").forEach(e=>{groups[e.staff_group||"office"]=(groups[e.staff_group||"office"]||0)+1});
+    const pendingPay=state.payroll.filter(x=>x.status==="draft").length;
+    const pendingLetters=state.letterDrafts.filter(x=>x.status==="draft").length;
+    const pendingLeave=state.leaves.filter(x=>x.status==="pending").length;
+    $("admin-operations").textContent="Teams — Office: "+groups.office+" · Sales: "+groups.sales+
+      " · Plantation: "+groups.plantation+" | Payroll drafts: "+pendingPay+
+      " | Letter drafts: "+pendingLetters+" | Leave awaiting HR: "+pendingLeave;
+  }
+  function exportCandidates(){
+    if(!isHR())return;
+    staffCSV(state.candidates.map(x=>({...x,branch:branchName(x.branch_id)})),
+      ["full_name","email","position","branch","stage","notes"],
+      "PRIME_Recruitment_"+localDate()+".csv");
+  }
+  function exportKpis(){
+    if(!isHR())return;
+    staffCSV(state.kpis.map(x=>({
+      staff_code:state.employees.find(e=>e.id===x.employee_id)?.staff_code||"",
+      employee:employeeName(x.employee_id),period_month:x.period_month,
+      target_amount:x.target_amount,achieved_amount:x.achieved_amount,
+      completion_pct:Number(x.target_amount)>0?Math.round(10000*Number(x.achieved_amount)/Number(x.target_amount))/100:0
+    })),["staff_code","employee","period_month","target_amount","achieved_amount","completion_pct"],
+    "PRIME_KPI_"+localDate()+".csv");
+  }
+  function exportAssets(){
+    if(!isHR())return;
+    staffCSV(state.assets.map(x=>({
+      asset_tag:x.asset_tag,description:x.description,
+      assigned_to:x.assigned_to?employeeName(x.assigned_to):"Unassigned",
+      status:x.status,notes:x.notes||""
+    })),["asset_tag","description","assigned_to","status","notes"],
+    "PRIME_Assets_"+localDate()+".csv");
+  }
+
+
+  function renderLetterTemplates(){
+    if(!isHR())return;
+    const picker=$("letter-template-select"),selected=picker.value;
+    picker.innerHTML='<option value="">New template</option>'+state.letterTemplates.map(t=>
+      '<option value="'+esc(t.id)+'" '+(selected===t.id?'selected':'')+'>'+esc(t.template_name+" (v"+t.version+")")+'</option>'
+    ).join("");
+    const draftSel=$("letter-draft-template"),chosen=draftSel.value;
+    draftSel.innerHTML='<option value="">Select approved template</option>'+state.letterTemplates.filter(t=>t.status==="approved").map(t=>
+      '<option value="'+esc(t.id)+'" '+(chosen===t.id?'selected':'')+'>'+esc(t.template_name+" · v"+t.version)+'</option>'
+    ).join("");
+    $("letter-template-rows").innerHTML=state.letterTemplates.map(t=>
+      '<tr><td>'+esc(t.template_name)+'</td><td>'+esc(t.designation_match||"Any")+'</td><td>'+esc(t.language)+'</td><td>'+esc(t.version)+'</td><td>'+fmtStatus(t.status)+'</td></tr>'
+    ).join("")||empty(5,"No company-approved letter templates entered.");
+  }
+  function loadTemplateEditor(){
+    if(!isAdmin())return;
+    const t=state.letterTemplates.find(x=>x.id===$("letter-template-select").value);
+    const f=$("letter-template-form");
+    f.reset();
+    for(const key of ["template_name","designation_match","language","subject","body","status"])
+      setFormValue(f,key,t?.[key]||(key==="language"?"en":key==="status"?"draft":""));
+  }
+  async function saveTemplate(ev){
+    ev.preventDefault();if(!isAdmin())return;
+    const f=ev.target;
+    const record={
+      template_name:formValue(f,"template_name").trim(),
+      designation_match:formValue(f,"designation_match").trim()||null,
+      language:formValue(f,"language"),
+      subject:formValue(f,"subject").trim(),
+      body:formValue(f,"body"),
+      status:formValue(f,"status"),
+      updated_by:state.user.id
+    };
+    if(record.body.length<30)return toast("Paste the full approved wording before saving.",true);
+    if(record.status==="approved"&&!confirm("Confirm this is the exact company-approved wording, including all unchanged common clauses?"))
+      return;
+    const id=$("letter-template-select").value;
+    const q=id?state.client.from("hr_letter_templates").update(record).eq("id",id):
+      state.client.from("hr_letter_templates").insert(record);
+    const {error}=await q;
+    if(error)return toast(normalizeErr(error),true);
+    toast("Template saved. Revision/version recorded.");await fetchData();
+  }
+  function letterMerge(text,employee,number){
+    const dict={
+      employee_name:employee.full_name,
+      staff_code:employee.staff_code,
+      designation:employee.designation,
+      branch:branchName(employee.branch_id),
+      date:localDate(),
+      joined_on:employee.joined_on||"To be confirmed",
+      company_name:"Prime Agri Business & Plantations (Pvt) Ltd",
+      document_no:number
+    };
+    const unknown=new Set();
+    const merged=String(text).replace(/\{\{\s*([a-z_]+)\s*\}\}/gi,(token,key)=>{
+      if(!Object.prototype.hasOwnProperty.call(dict,key)){unknown.add(key);return token}
+      return String(dict[key]??"");
+    });
+    if(unknown.size)throw Error("Unknown template placeholders: "+[...unknown].join(", "));
+    if(merged.includes("{{"))throw Error("A placeholder is not resolved in the template.");
+    return merged;
+  }
+  async function draftLettersBulk(ev){
+    ev.preventDefault();if(!isHR())return;
+    const f=ev.target,template=state.letterTemplates.find(t=>t.id===formValue(f,"template_id")&&t.status==="approved");
+    if(!template)return toast("Choose an approved letter template.",true);
+    const codes=[...new Set(formValue(f,"staff_codes").split(/[\s,;]+/).map(x=>x.trim().toUpperCase()).filter(Boolean))];
+    if(!codes.length||codes.length>100)return toast("Enter 1–100 employee codes.",true);
+    const prefix=formValue(f,"prefix").trim();
+    if(!/^[A-Za-z0-9/_-]{3,45}$/.test(prefix))return toast("Prefix: 3–45 letters/numbers, slash, hyphen or underscore.",true);
+    const rows=[];
+    try{
+      for(const code of codes){
+        const e=state.employees.find(x=>x.staff_code.toUpperCase()===code);
+        if(!e)throw Error("Unknown employee number: "+code);
+        if(template.designation_match&&!e.designation.toLowerCase().includes(template.designation_match.toLowerCase()))
+          throw Error("Template designation does not match "+code+": "+e.designation);
+        const number=prefix+code;
+        rows.push({
+          employee_id:e.id,template_id:template.id,template_version:template.version,
+          document_no:number,subject:letterMerge(template.subject,e,number),
+          rendered_body:letterMerge(template.body,e,number),status:"draft",created_by:state.user.id
+        });
+      }
+    }catch(err){return toast(err.message,true)}
+    if(!confirm("Create "+rows.length+" UNSIGNED letter drafts? Nothing will be issued or signed."))return;
+    const {error}=await state.client.from("hr_letter_drafts").insert(rows);
+    if(error)return toast("Draft generation failed: "+normalizeErr(error),true);
+    toast(rows.length+" unsigned letter drafts created.");f.reset();await fetchData();
+  }
+  function renderLetterDrafts(){
+    if(!isHR())return;
+    $("letter-draft-rows").innerHTML=state.letterDrafts.map(d=>{
+      let controls='<button class="btn tiny outline" data-draft-print="'+esc(d.id)+'">Preview / Print</button>';
+      if(isAdmin()&&d.status==="draft")controls+=' <button class="btn tiny" data-draft-action="approved" data-draft-id="'+esc(d.id)+'">Approve</button>';
+      if(isAdmin()&&d.status==="approved")controls+=' <button class="btn tiny primary" data-draft-action="issued" data-draft-id="'+esc(d.id)+'">Mark Issued</button>';
+      return '<tr><td>'+esc(d.document_no)+'</td><td>'+esc(employeeName(d.employee_id))+'</td><td>'+esc(d.subject)+'</td><td>'+fmtStatus(d.status)+'</td><td>'+controls+'</td></tr>';
+    }).join("")||empty(5,"No generated drafts. Select an approved template above.");
+  }
+  async function decideLetterDraft(id,newStatus){
+    if(!isAdmin())return;
+    const d=state.letterDrafts.find(x=>x.id===id);
+    if(!d||!((d.status==="draft"&&newStatus==="approved")||(d.status==="approved"&&newStatus==="issued")))return;
+    if(!confirm((newStatus==="issued"?"Mark this letter as actually issued?":"Approve the complete unchanged wording of")+" "+d.document_no+"?"))return;
+    const {error,data}=await state.client.from("hr_letter_drafts").update({status:newStatus})
+      .eq("id",id).eq("status",d.status).select("id");
+    if(error||!data?.length)return toast(error?normalizeErr(error):"Draft status was changed elsewhere.",true);
+    if(newStatus==="issued"){
+      // Keep the legacy HR Letter Register synchronized with generated documents.
+      const {error:regErr}=await state.client.from("letter_register").insert({
+        employee_id:d.employee_id,document_no:d.document_no,letter_type:d.subject,
+        issued_on:localDate(),status:"issued",notes:"Issued from reviewed letter template, PRIME HR Next Level"
+      });
+      if(regErr)toast("Marked issued, but legacy letter register entry failed: "+normalizeErr(regErr),true);
+      else toast("Letter marked issued and recorded.");
+    }else toast("Letter approved. No signature was added.");
+    await fetchData();
+  }
+  function printDraftLetter(id){
+    if(!isHR())return;
+    const d=state.letterDrafts.find(x=>x.id===id);
+    if(!d)return;
+    const e=state.employees.find(x=>x.id===d.employee_id);
+    const formatted=esc(d.rendered_body).replace(/\r?\n/g,"<br>");
+    const html='<html><head><meta charset="utf-8"><title>PRIME HR Letter '+esc(d.document_no)+'</title>'+
+     '<style>body{font:15px/1.65 Georgia,serif;color:#22362d;margin:32px auto;max-width:780px;padding:28px}h1{text-align:center;color:#14513e}p{margin:5px 0 16px}.small{font:12px Arial;color:#777}.text{margin:30px 0;white-space:normal}.sign{margin-top:80px}button{padding:12px}@media print{button{display:none}}</style></head><body>'+
+     '<h1>PRIME</h1><p style="text-align:center">Prime Agri Business &amp; Plantations (Pvt) Ltd</p><hr>'+
+     '<p class="small">'+esc(d.document_no)+' · '+esc(localDate())+' · '+esc(d.status.toUpperCase())+'</p>'+
+     '<p>To: <b>'+esc(e?.full_name||"Staff")+'</b></p><h2>'+esc(d.subject)+'</h2>'+
+     (d.status==="draft"?'<p><b>UNAPPROVED DRAFT — NOT ISSUED</b></p>':d.status==="approved"?'<p><b>APPROVED — NOT YET ISSUED</b></p>':'')+
+     '<div class="text">'+formatted+'</div><div class="sign">____________________________<br>Authorized Signatory (signature not generated)</div>'+
+     '<p class="small">Check against your company letterhead, authorized signatures, and applicable legal requirements before delivery.</p>'+
+     '<button onclick="window.print()">Print / Save PDF</button></body></html>';
+    const w=window.open("","_blank");if(!w)return toast("Enable popups to preview letter.",true);
+    w.document.open();w.document.write(html);w.document.close();
+  }
+
   function events() {
     $("auth-form").addEventListener("submit",submitAuth);
     $("toggle-auth").addEventListener("click",toggleAuth);
@@ -708,6 +1097,25 @@
     $("field-team-filter").addEventListener("change",renderFieldReports);
     $("field-date-filter").addEventListener("change",renderFieldReports);
     $("field-export").addEventListener("click",exportFieldReports);
+    $("payroll-form").addEventListener("submit",savePayroll);
+    $("payroll-form").addEventListener("input",payrollFormTotals);
+    $("payroll-employee").addEventListener("change",fillPayrollFromMaster);
+    $("payroll-month").addEventListener("change",fillPayrollFromMaster);
+    $("payroll-period-filter").addEventListener("change",renderPayroll);
+    $("payroll-status-filter").addEventListener("change",renderPayroll);
+    $("payroll-export").addEventListener("click",exportPayroll);
+    $("entitlement-form").addEventListener("submit",saveEntitlement);
+    $("balance-year").addEventListener("change",renderLeaveBalances);
+    $("leave-balance-export").addEventListener("click",exportLeaveBalances);
+    $("candidate-export").addEventListener("click",exportCandidates);
+    $("kpi-export").addEventListener("click",exportKpis);
+    $("asset-export").addEventListener("click",exportAssets);
+    $("letter-template-select").addEventListener("change",loadTemplateEditor);
+    $("letter-template-form").addEventListener("submit",saveTemplate);
+    $("letter-draft-form").addEventListener("submit",draftLettersBulk);
+    $("attendance-export").addEventListener("click",exportAttendance);
+    $("attendance-team-filter").addEventListener("change",renderAttendance);
+    $("attendance-date-filter").addEventListener("change",renderAttendance);
     $("nav").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)switchView(b.dataset.view)});
     $("workspace").addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)switchView(b.dataset.go)});
     $("menu-toggle").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));
@@ -765,6 +1173,10 @@
       b=e.target.closest("[data-staff-reset]");if(b)return staffManage("reset_password",b.dataset.staffReset);
       b=e.target.closest("[data-staff-toggle]");if(b)return staffManage("set_access",b.dataset.staffToggle,b.dataset.staffEnable==="true");
       b=e.target.closest("[data-staff-repair]");if(b)return staffManage("repair",b.dataset.staffRepair);
+      b=e.target.closest("[data-payroll-action]");if(b)return decidePayroll(b.dataset.payrollId,b.dataset.payrollAction);
+      b=e.target.closest("[data-payroll-print]");if(b)return printPayroll(b.dataset.payrollPrint);
+      b=e.target.closest("[data-draft-action]");if(b)return decideLetterDraft(b.dataset.draftId,b.dataset.draftAction);
+      b=e.target.closest("[data-draft-print]");if(b)return printDraftLetter(b.dataset.draftPrint);
     });
     $("workspace").addEventListener("change",e=>{const s=e.target.closest("[data-role-id]");if(s)updateRole(s.dataset.roleId,s.value)});
   }
