@@ -6,7 +6,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],busy:false,screen:"home",installPrompt:null};
+const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],busy:false,screen:"home",installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const time=s=>s?new Date(s).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Colombo"}):"—";
 const day=s=>s?String(s).slice(0,10):"—";
@@ -55,9 +55,13 @@ function render(){
  $("todayDate").textContent=today();$("homeStaffNo").textContent=e.staff_code;
  $("homeDetails").textContent=e.full_name+" · "+e.designation+" · "+(e.phone||"Phone not recorded");
  const record=state.attendance.find(a=>a.work_date===today());
+ const locationBlocked=state.locationPermission==="denied";
+ $("attendanceAccessMessage").textContent=locationBlocked
+   ?"Check In / Check Out කිරීමට phone/browser settings වල Location Allow කරන්න."
+   :"";
  $("attendanceState").textContent=record?(record.check_out?"Completed":"Checked In"):"Not In";
- $("employeeCheckIn").disabled=state.busy||!!record;
- $("employeeCheckOut").disabled=state.busy||!record||!!record.check_out;
+ $("employeeCheckIn").disabled=state.busy||locationBlocked||!!record;
+ $("employeeCheckOut").disabled=state.busy||locationBlocked||!record||!!record.check_out;
  $("attendanceMessage").textContent=record?"In: "+time(record.check_in)+"  ·  Out: "+time(record.check_out)+" · "+record.mode:"No check-in recorded today.";
  $("attendanceHistory").innerHTML=state.attendance.length?state.attendance.slice(0,30).map(a=>
   '<div class="entry"><div class="row"><b>'+safe(a.work_date)+'</b><span class="chip">'+safe(a.mode)+'</span></div><p>In '+safe(time(a.check_in))+' · Out '+safe(time(a.check_out))+'</p></div>').join(""):'<p class="soft">No attendance records yet.</p>';
@@ -79,11 +83,36 @@ async function checkSession(){
  if(!session){view("loginScreen");return}
  state.user=session.user;
  await loadData();
- if(state.profile?.is_active && state.employee?.status==="active")requestNativeLocationOnce();
+ if(state.profile?.is_active && state.employee?.status==="active"){
+   await observeLocationPermission();
+   requestNativeLocationOnce();
+ }
 }
 // Request the standard phone/browser permission exactly once for each installed
 // employee account. Login only asks permission; GPS is NOT recorded or sent to HR.
 // getCurrentPosition triggers the OS dialog; no custom alert/toast is displayed.
+// Observe the browser permission state without triggering an additional request.
+async function observeLocationPermission(){
+ if(!state.user||!state.employee||!state.profile?.is_active)return;
+ if(!window.isSecureContext||!navigator.geolocation){
+   state.locationPermission="denied";render();return;
+ }
+ if(!navigator.permissions?.query)return;
+ try{
+   const status=await navigator.permissions.query({name:"geolocation"});
+   state.locationPermissionStatus=status;
+   state.locationPermission=status.state;
+   status.onchange=()=>{
+     state.locationPermission=status.state;
+     if(state.employee)render();
+   };
+   render();
+ }catch{
+   // iOS/browser versions without Permissions API still enforce GPS permission
+   // through getCurrentPosition before submitting attendance.
+   state.locationPermission="unknown";
+ }
+}
 function requestNativeLocationOnce(){
  if(!state.user || !state.profile?.is_active || state.employee?.status!=="active")return;
  if(!window.isSecureContext || !navigator.geolocation)return;
@@ -91,8 +120,8 @@ function requestNativeLocationOnce(){
  if(localStorage.getItem(key)==="yes")return;
  localStorage.setItem(key,"yes");
  navigator.geolocation.getCurrentPosition(
-   ()=>{},
-   ()=>{/* Browser permission denial is handled in phone settings or at attendance. */},
+   ()=>{state.locationPermission="granted";if(state.employee)render();},
+   ()=>{observeLocationPermission();},
    {enableHighAccuracy:true,maximumAge:0,timeout:20000}
  );
 }
@@ -103,13 +132,21 @@ function gps(){
    const {latitude,longitude,accuracy}=p.coords;
    if(![latitude,longitude,accuracy].every(Number.isFinite)||accuracy>1000)
     return reject(Error("Location accuracy is too low. Enable Precise Location or move outside."));
+   state.locationPermission="granted";
    resolve({latitude,longitude,accuracy});
-  },err=>reject(Error(err.code===1?"Location denied. Enable permission in Phone / Browser Settings.":err.code===2?"Location unavailable. Turn on phone location services.":"Location timeout. Try again outside.")),
+  },err=>{
+    if(err.code===1)state.locationPermission="denied";
+    reject(Error(err.code===1?"Attendance requires Location Allow. Enable it in phone/browser settings.":err.code===2?"Location unavailable. Turn on phone location services.":"Location timeout. Try again outside."));
+  },
   {enableHighAccuracy:true,maximumAge:0,timeout:20000});
  });
 }
 async function markAttendance(action){
  if(state.busy||!state.employee)return;
+ if(state.locationPermission==="denied"){
+   toast("Location Allow is required to mark attendance. Enable it in phone/browser settings.");
+   return;
+ }
  state.busy=true;render();
  try{
   const p=await gps();
@@ -120,7 +157,7 @@ async function markAttendance(action){
 
   toast("Attendance saved successfully.");
   await loadData();
- }catch(e){toast(e.message)}
+ }catch(e){toast(e.message);await observeLocationPermission()}
  finally{state.busy=false;render()}
 }
 async function login(ev){
@@ -132,7 +169,10 @@ async function login(ev){
   if(error)throw Error("Employee Number or password is incorrect.");
   if(!data.user)throw Error("Login failed.");
   state.user=data.user;await loadData();
-  if(state.profile?.is_active && state.employee?.status==="active")requestNativeLocationOnce();
+  if(state.profile?.is_active && state.employee?.status==="active"){
+    await observeLocationPermission();
+    requestNativeLocationOnce();
+  }
  }catch(e){toast(e.message)}finally{b.disabled=false}
 }
 async function passwordChange(ev){
@@ -195,6 +235,9 @@ async function init(){
 
  $("employeeCheckIn").addEventListener("click",()=>markAttendance("check_in"));
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));
+ document.addEventListener("visibilitychange",()=>{
+   if(document.visibilityState==="visible"&&state.user&&state.employee)observeLocationPermission();
+ });
  // No employee sign-out: device stores the login session across app closes.
  // Admin can revoke staff access server-side if their phone is lost.
  $("changePasswordButton").addEventListener("click",()=>view("passwordScreen"));
