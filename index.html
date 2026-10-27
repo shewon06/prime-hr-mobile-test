@@ -55,6 +55,7 @@
       <button data-view="locations" class="nav-item hr-only"><span>⌖</span> GPS Attendance</button>
       <button data-view="field-work" class="nav-item hr-only"><span>▤</span> Field Work Reports</button>
       <button data-view="leave" class="nav-item"><span>▤</span> Leave requests</button>
+      <button data-view="payroll" class="nav-item hr-only"><span>₨</span> Payroll</button>
       <button data-view="recruitment" class="nav-item hr-only"><span>◈</span> Recruitment</button>
       <button data-view="notices" class="nav-item"><span>♧</span> HR Notices</button>
       <button data-view="profile" class="nav-item"><span>◉</span> My profile</button>
@@ -78,7 +79,7 @@
           <div class="metric"><span>Pending leave</span><strong id="m-leave">—</strong><small>Awaiting decision</small></div>
           <div class="metric"><span>Recruitment</span><strong id="m-hiring">—</strong><small>Active candidates</small></div>
         </div>
-        <div class="split"><article class="panel"><div class="panel-head"><h3>Welcome to your HR workspace</h3><span class="pill">LIVE DATA</span></div><p>The dashboard reads directly from your private Supabase database. Employees can only see their own permitted records; HR sees company operations.</p><div id="welcome-summary" class="tip"></div></article><article class="panel"><div class="panel-head"><h3>PRIME locations</h3></div><div id="branch-list" class="branch-list"></div></article></div>
+        <div class="split"><article class="panel"><div class="panel-head"><h3>Welcome to your HR workspace</h3><span class="pill">LIVE DATA</span></div><p>The dashboard reads directly from your private Supabase database. Employees can only see their own permitted records; HR sees company operations.</p><div id="welcome-summary" class="tip"></div><div id="admin-operations" class="tip hr-only" style="margin-top:12px"></div></article><article class="panel"><div class="panel-head"><h3>PRIME locations</h3></div><div id="branch-list" class="branch-list"></div></article></div>
         <article class="panel"><div class="panel-head"><h3>Quick actions</h3></div><div class="quick-grid"><button data-go="attendance" class="quick">◷<b>Mark attendance</b><small>Record a secure check-in</small></button><button data-go="leave" class="quick">▤<b>Apply for leave</b><small>Track request status</small></button><button data-go="employees" class="quick hr-only">♙<b>Employee records</b><small>Manage staff directory</small></button></div></article>
       </section>
       <section id="view-employees" class="view hidden">
@@ -129,10 +130,40 @@
  </section>
  <section id="view-leave" class="view hidden">
         <div class="split"><article class="panel"><div class="panel-head"><h3>New leave request</h3></div><form id="leave-form" class="form-grid"><label>Leave category<select name="kind" required><option>Annual</option><option>Casual</option><option>Medical</option><option>No-pay</option></select></label><div class="two"><label>From<input type="date" name="from_date" required></label><label>To<input type="date" name="to_date" required></label></div><label>Reason<textarea name="reason" maxlength="600" rows="3" required></textarea></label><button class="btn primary" type="submit">Submit request</button></form></article><article class="panel"><div class="panel-head"><h3>Approval process</h3></div><p>Requests are created with Pending status. Only an authorised HR user can approve or reject a request; the employee cannot modify the approval.</p><div class="tip">Leave balance and statutory entitlement calculations are scheduled for a subsequent phase and are not represented as approved balances here.</div></article></div>
-        <article class="panel"><div class="panel-head"><h3>Leave register</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th>Reason</th><th>Action</th></tr></thead><tbody id="leave-rows"></tbody></table></div></article>
+        <article class="panel hr-only"><div class="panel-head"><h3>Leave Entitlements & Balance (HR)</h3></div>
+ <p class="fineprint">Enter the company-approved entitlement for each employee and year. Used leave counts approved calendar days in this register; public holidays, statutory entitlements, half-days and opening balances require separate policy approval.</p>
+ <form id="entitlement-form" class="form-grid">
+ <div class="two"><label>Employee<select name="employee_id" id="entitlement-employee" required></select></label><label>Year<input name="leave_year" id="entitlement-year" type="number" min="2020" max="2100" required></label></div>
+ <div class="two"><label>Leave Type<select name="leave_type"><option>Annual</option><option>Casual</option><option>Medical</option></select></label><label>Entitled Days<input type="number" name="entitled_days" min="0" max="366" step=".5" required></label></div>
+ <label>Carry Forward (approved days)<input type="number" name="carried_days" min="0" max="366" step=".5" value="0" required></label>
+ <button class="btn primary" type="submit">Save Entitlement</button></form>
+ <div class="toolbar"><label>Balance Year<input type="number" id="balance-year" min="2020" max="2100"></label><button class="btn outline" type="button" id="leave-balance-export">Export Balances CSV</button></div>
+ <div class="table-scroll"><table><thead><tr><th>Employee</th><th>Type</th><th>Year</th><th>Entitled + Carry</th><th>Approved Calendar Days</th><th>Balance</th></tr></thead><tbody id="leave-balance-rows"></tbody></table></div>
+ </article>
+ <article class="panel"><div class="panel-head"><h3>Leave register</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th>Reason</th><th>Action</th></tr></thead><tbody id="leave-rows"></tbody></table></div></article>
       </section>
-      <section id="view-recruitment" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Candidate pipeline</h3><button class="btn primary" id="candidate-add">+ Add candidate</button></div><div class="table-scroll"><table><thead><tr><th>Candidate</th><th>Position</th><th>Branch</th><th>Stage</th><th>Notes</th><th></th></tr></thead><tbody id="candidate-rows"></tbody></table></div></article>
+      <section id="view-payroll" class="view hidden">
+ <article class="panel"><div class="panel-head"><h3>Monthly Payroll — Draft & Approval</h3><span class="pill">HR / ADMIN</span></div>
+ <p class="fineprint">Figures are manually entered/snapshotted. EPF, ETF, APIT and deductions must be checked against approved payroll rules. No automatic statutory calculations, payments or bank transfers.</p>
+ <form id="payroll-form" class="form-grid">
+ <div class="two"><label>Employee<select name="employee_id" id="payroll-employee" required></select></label><label>Salary Month<input name="period" id="payroll-month" type="month" required></label></div>
+ <div class="two"><label>Basic Salary (LKR)<input name="basic_pay" type="number" min="0" step=".01" value="0" required></label><label>Allowances (LKR)<input name="allowance_pay" type="number" min="0" step=".01" value="0" required></label></div>
+ <div class="two"><label>Overtime (LKR)<input name="overtime_pay" type="number" min="0" step=".01" value="0" required></label><label>Other Earnings (LKR)<input name="other_earnings" type="number" min="0" step=".01" value="0" required></label></div>
+ <div class="two"><label>Employee EPF deduction (LKR)<input name="employee_epf" type="number" min="0" step=".01" value="0" required></label><label>APIT / Income Tax (LKR)<input name="income_tax" type="number" min="0" step=".01" value="0" required></label></div>
+ <div class="two"><label>Other Deductions (LKR)<input name="other_deductions" type="number" min="0" step=".01" value="0" required></label><label>Employer EPF (Company Cost)<input name="employer_epf" type="number" min="0" step=".01" value="0" required></label></div>
+ <label>Employer ETF (Company Cost)<input name="employer_etf" type="number" min="0" step=".01" value="0" required></label>
+ <label>Internal Notes<textarea name="notes" maxlength="1000" rows="2"></textarea></label>
+ <div id="payroll-live-summary" class="tip">Gross: Rs. 0 · Net: Rs. 0</div>
+ <button class="btn primary" type="submit">Save / Update Draft Payroll</button>
+ </form></article>
+ <article class="panel"><div class="panel-head"><h3>Payroll Register</h3><button class="btn outline" type="button" id="payroll-export">Export Payroll CSV</button></div>
+ <div class="toolbar"><label>Period<input id="payroll-period-filter" type="month"></label><label>Status<select id="payroll-status-filter"><option value="">All statuses</option><option value="draft">Draft</option><option value="approved">Approved</option><option value="paid">Paid</option></select></label></div>
+ <div id="payroll-totals" class="tip"></div>
+ <div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Gross LKR</th><th>Net LKR</th><th>Status</th><th>Action</th></tr></thead><tbody id="payroll-rows"></tbody></table></div>
+ </article>
+</section>
+<section id="view-recruitment" class="view hidden">
+        <article class="panel"><div class="panel-head"><h3>Candidate pipeline</h3><div class="button-row"><button class="btn outline" id="candidate-export" type="button">Export CSV</button><button class="btn primary" id="candidate-add">+ Add candidate</button></div></div><div class="table-scroll"><table><thead><tr><th>Candidate</th><th>Position</th><th>Branch</th><th>Stage</th><th>Notes</th><th></th></tr></thead><tbody id="candidate-rows"></tbody></table></div></article>
       </section>
       
       <section id="view-notices" class="view hidden">
@@ -145,14 +176,37 @@
         <article class="panel"><h3>App location & privacy</h3><p>Location snapshots are collected only on attendance actions. Your browser or phone can revoke the location permission at any time; without GPS check-in will not proceed. HR/Admin can view the exact check-in/out snapshots.</p><button class="btn outline" id="profile-location-settings">Review Location Permission</button></article>
       </section>
       <section id="view-kpi" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Sales KPI / Business Tracker</h3><button class="btn primary" id="kpi-add">+ Add KPI</button></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Target (LKR)</th><th>Achieved (LKR)</th><th>Completion</th></tr></thead><tbody id="kpi-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Sales KPI / Business Tracker</h3><div class="button-row"><button class="btn outline" id="kpi-export" type="button">Export CSV</button><button class="btn primary" id="kpi-add">+ Add KPI</button></div></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Target (LKR)</th><th>Achieved (LKR)</th><th>Completion</th></tr></thead><tbody id="kpi-rows"></tbody></table></div></article>
       </section>
       <section id="view-assets" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Asset Register</h3><button class="btn primary" id="asset-add">+ Add asset</button></div><div class="table-scroll"><table><thead><tr><th>Asset Tag</th><th>Description</th><th>Assigned to</th><th>Status</th></tr></thead><tbody id="asset-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Asset Register</h3><div class="button-row"><button class="btn outline" id="asset-export" type="button">Export CSV</button><button class="btn primary" id="asset-add">+ Add asset</button></div></div><div class="table-scroll"><table><thead><tr><th>Asset Tag</th><th>Description</th><th>Assigned to</th><th>Status</th></tr></thead><tbody id="asset-rows"></tbody></table></div></article>
       </section>
       <section id="view-letters" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
-        <p class="fineprint">This tracks draft and issued letters. Generation of legally approved position-specific appointment letters needs the company's exact approved templates before activation. No letter is automatically signed.</p>
+        <p class="fineprint">Admin must upload/enter company-approved exact position-specific wording first. This workflow only creates unsigned drafts, requires Admin approval, and records issuance. It does not generate legal clauses automatically.</p>
+ <div class="split">
+ <div><h4>Company Appointment / HR Letter Template (Admin Only)</h4>
+ <form id="letter-template-form" class="form-grid admin-only">
+ <label>Edit Existing Template<select id="letter-template-select"><option value="">New template</option></select></label>
+ <label>Template Name<input name="template_name" maxlength="130" required></label>
+ <label>Designation Match (optional)<input name="designation_match" maxlength="130"></label>
+ <div class="two"><label>Language<select name="language"><option value="en">English</option><option value="si">Sinhala</option><option value="ta">Tamil</option></select></label><label>Status<select name="status"><option value="draft">Draft</option><option value="approved">Approved wording</option></select></label></div>
+ <label>Subject<input name="subject" maxlength="250" required placeholder="Appointment Letter — {{designation}}"></label>
+ <label>Exact Approved Letter Text<textarea name="body" rows="12" maxlength="30000" required placeholder="Paste the official HR-approved content here exactly. Use {{employee_name}}, {{designation}}, {{staff_code}}, {{branch}}, {{date}}, {{joined_on}} placeholders."></textarea></label>
+ <button class="btn primary" type="submit">Save Template / Revision</button>
+ </form>
+ <p class="fineprint">Allowed placeholders: {{employee_name}}, {{staff_code}}, {{designation}}, {{branch}}, {{date}}, {{joined_on}}, {{company_name}}, {{document_no}}. The app never creates signatures automatically.</p>
+ </div>
+ <div><h4>Draft Letters (HR / Admin)</h4>
+ <form id="letter-draft-form" class="form-grid">
+ <label>Approved Template<select name="template_id" id="letter-draft-template" required></select></label>
+ <label>Document Number Prefix<input name="prefix" maxlength="45" placeholder="PRIME-HR-2026-" required></label>
+ <label>Staff Codes (one per line or comma-separated)<textarea name="staff_codes" rows="8" required placeholder="M010\nM011\nM012"></textarea></label>
+ <button class="btn primary" type="submit">Generate Unsigned Letter Drafts</button></form>
+ <p class="fineprint">Bulk generation creates draft records only. Admin checks and approves each document before issuance. Preview/Print is available from the draft register.</p>
+ </div></div>
+ <h4>Templates</h4><div class="table-scroll"><table><thead><tr><th>Template</th><th>Designation</th><th>Language</th><th>Version</th><th>Approved</th></tr></thead><tbody id="letter-template-rows"></tbody></table></div>
+ <h4>Generated Draft Register</h4><div class="table-scroll"><table><thead><tr><th>Doc No.</th><th>Employee</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead><tbody id="letter-draft-rows"></tbody></table></div>
         <div class="table-scroll"><table><thead><tr><th>Document No.</th><th>Employee</th><th>Type</th><th>Date</th><th>Status</th></tr></thead><tbody id="letter-rows"></tbody></table></div></article>
       </section>
       <section id="view-accounts" class="view hidden">
