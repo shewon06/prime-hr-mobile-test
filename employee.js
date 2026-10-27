@@ -197,12 +197,40 @@ async function showBrowserAlert(n){
   notice.onclick=()=>{window.focus();page("alerts");notice.close()};
  }catch{/* The authenticated in-app inbox remains available. */}
 }
+// Show freshly published HR Notices prominently while this app is open.
+// Do not replay old notifications on login or when reopening the app.
+const hrPopupQueue=[];
+const hrPopupSeen=new Set();
+function showNextHRNoticePopup(){
+ const dialog=$("hrNoticePopup");
+ if(!dialog||dialog.open||document.visibilityState!=="visible"||!state.employee)return;
+ const next=hrPopupQueue.shift();
+ if(!next)return;
+ dialog.dataset.notificationId=next.id;
+ $("hrPopupTitle").textContent=next.title||"New HR Notice";
+ $("hrPopupBody").textContent=next.body||"A new HR notice has been published.";
+ if(typeof dialog.showModal==="function")dialog.showModal();
+ else{dialog.setAttribute("open","");}
+}
+function queueHRNoticePopup(n){
+ if(n?.kind!=="hr_notice"||!n.id||document.visibilityState!=="visible"||!state.employee)return;
+ if(hrPopupSeen.has(n.id))return;
+ hrPopupSeen.add(n.id);
+ hrPopupQueue.push({id:n.id,title:n.title,body:n.body});
+ showNextHRNoticePopup();
+}
+function closeHRNoticePopup(){
+ const d=$("hrNoticePopup");
+ if(d.open&&typeof d.close==="function")d.close();
+ else d.removeAttribute("open");
+}
 function acceptNewAlert(n){
  if(!n?.id||state.notifications.some(x=>x.id===n.id))return;
  state.notifications.unshift(n);
  state.notifications=state.notifications.slice(0,100);
  renderAlerts();
- toast(n.title);
+ if(n.kind==="hr_notice")queueHRNoticePopup(n);
+ else toast(n.title);
  showBrowserAlert(n);
  if(n.kind==="hr_notice"){
   state.client.from("hr_notices").select("id,title,content,published,created_at")
@@ -225,7 +253,11 @@ async function refreshAlerts(){
  state.notifications=data||[];
  renderAlerts();
  if(state.alertsInitialized){
-  for(const n of fresh.slice(0,3)){toast(n.title);showBrowserAlert(n)}
+  for(const n of fresh.slice(0,3)){
+   if(n.kind==="hr_notice")queueHRNoticePopup(n);
+   else toast(n.title);
+   showBrowserAlert(n);
+  }
  }
  state.alertsInitialized=true;
  if(fresh.some(n=>n.kind==="hr_notice"||n.kind.startsWith("leave_"))){
@@ -422,6 +454,17 @@ async function init(){
  $("passwordForm").addEventListener("submit",passwordChange);
  $("leaveForm").addEventListener("submit",leave);
  $("alertsPermissionButton").addEventListener("click",enablePhoneAlerts);
+ $("hrPopupLater").addEventListener("click",closeHRNoticePopup);
+ $("hrPopupOpen").addEventListener("click",()=>{
+  const id=$("hrNoticePopup").dataset.notificationId;
+  closeHRNoticePopup();
+  if(id)markAlertRead(id);
+  else page("notices");
+ });
+ $("hrNoticePopup").addEventListener("close",()=>{
+  // Keep a series of incoming Notices sequential instead of losing them.
+  if(hrPopupQueue.length)showNextHRNoticePopup();
+ });
  $("alertsList").addEventListener("click",e=>{
   const b=e.target.closest("[data-alert-open]");
   if(b)markAlertRead(b.dataset.alertOpen);
