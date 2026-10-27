@@ -102,29 +102,29 @@ function gps(){
   navigator.geolocation.getCurrentPosition(p=>{
    const {latitude,longitude,accuracy}=p.coords;
    if(![latitude,longitude,accuracy].every(Number.isFinite)||accuracy>1000)
-    return reject(Error("Low GPS accuracy. Enable Precise Location or move outside."));
+    return reject(Error("Location accuracy is too low. Enable Precise Location or move outside."));
    resolve({latitude,longitude,accuracy});
-  },err=>reject(Error(err.code===1?"Location denied. Enable permission in Phone / Browser Settings.":err.code===2?"Location unavailable. Turn on GPS.":"Location timeout. Try again outside.")),
+  },err=>reject(Error(err.code===1?"Location denied. Enable permission in Phone / Browser Settings.":err.code===2?"Location unavailable. Turn on phone location services.":"Location timeout. Try again outside.")),
   {enableHighAccuracy:true,maximumAge:0,timeout:20000});
  });
 }
 async function enableLocation(){
  $("allowLocation").disabled=true;$("gpsStatus").textContent="Requesting permission from your phone…";
- try{const p=await gps();$("gpsStatus").textContent="✓ GPS enabled · Accuracy ±"+Math.round(p.accuracy)+"m. A fresh location is collected on every attendance action.";toast("Location is ready for attendance.")}
+ try{const p=await gps();$("gpsStatus").textContent="✓ Location available · Accuracy ±"+Math.round(p.accuracy)+"m. A fresh location is collected on every attendance action.";toast("Location is ready for attendance.")}
  catch(e){$("gpsStatus").textContent=e.message;toast(e.message)}
  finally{$("allowLocation").disabled=false}
 }
 async function markAttendance(action){
  if(state.busy||!state.employee)return;
- state.busy=true;render();$("gpsStatus").textContent="Getting fresh GPS position…";
+ state.busy=true;render();$("gpsStatus").textContent="Getting current location for attendance…";
  try{
   const p=await gps();
   const {error}=await state.client.rpc("hr_mark_attendance",{
    p_action:action,p_lat:p.latitude,p_lng:p.longitude,p_accuracy:p.accuracy,p_mode:$("workMode").value
   });
   if(error)throw Error(error.message);
-  $("gpsStatus").textContent="✓ "+(action==="check_in"?"Check In":"Check Out")+" saved with GPS ±"+Math.round(p.accuracy)+"m";
-  toast("GPS Attendance saved successfully.");
+  $("gpsStatus").textContent="✓ "+(action==="check_in"?"Check In":"Check Out")+" saved with location accuracy ±"+Math.round(p.accuracy)+"m";
+  toast("Attendance saved successfully.");
   await loadData();
  }catch(e){$("gpsStatus").textContent=e.message;toast(e.message)}
  finally{state.busy=false;render()}
