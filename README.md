@@ -77,3 +77,16 @@ The Admin staff master has a \`staff_group\` value: \`office\`, \`sales\`, \`pla
 - CSV formula injection protection applies to exported reports. Do not treat a web GPS coordinate as proof of location; phones can be spoofed.
 - New DB schema applied as \`prime_hr_staff_groups_field_activity_reports\` and \`prime_hr_field_activity_requires_active_check_in\`.
 - New live Admin provisioning Edge Function v5 accepts \`staff_group\` via manual creation or Excel import.
+
+
+## Employee Notifications — October 27, 2026
+- HR approving or rejecting a pending leave request automatically creates one private inbox alert for the employee.
+- HR publishing a new Notice sends one alert to each active employee with a linked login. A notice can still be acknowledged separately from marking its inbox alert as read.
+- Employee Mobile App has Notifications/Alerts, unread counts, and navigation to the affected Leave or HR Notices screen.
+- Supabase database triggers create notifications; RLS restricts staff to their own alerts and permits only read-status changes.
+- Supabase Realtime is configured for this table. While the app remains connected, new notifications appear automatically. A 60-second foreground poll and refresh-on-focus provide fallback.
+- Phone/browser system popups can be requested by tapping **Enable Phone Alerts** in the Alerts page. Supported browsers can show these only when the app is active/running; iPhone requires a suitable installed PWA environment for system notifications.
+- **App-closed push delivery is NOT implemented**: background push requires Push API subscriptions, a server-side Web Push/VAPID or FCM sender, and delivery/auth monitoring. Do not market this as working closed-app push notifications.
+- Staff do not self-register. No private data is stored in the service-worker asset cache.
+- The database migration `prime_hr_employee_notifications_leave_and_notices` has been applied. The notification table was added to `supabase_realtime` publication.
+- Because rollout uses existing data, new alerts apply to actions taken after migration. Previously approved leave/notices remain accessible in their original screens.
