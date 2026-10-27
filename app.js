@@ -4,7 +4,7 @@
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
-  const state = {client:null,user:null,profile:null,view:"dashboard",branches:[],employees:[],attendance:[],leaves:[],candidates:[],profiles:[],locations:[],notices:[],reads:[],kpis:[],assets:[],letters:[],signup:false,loading:false,gpsBusy:false,staffUploadRows:[],staffCredentials:[],staffImportProgress:false};
+  const state = {client:null,user:null,profile:null,view:"dashboard",branches:[],employees:[],attendance:[],leaves:[],candidates:[],profiles:[],locations:[],fieldReports:[],notices:[],reads:[],kpis:[],assets:[],letters:[],signup:false,loading:false,gpsBusy:false,staffUploadRows:[],staffCredentials:[],staffImportProgress:false};
   const nameOf = e => e ? e.full_name : "Unknown employee";
   const esc = input => String(input ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
   const dateText = s => s ? new Date(s + (String(s).length===10?"T12:00:00":"")).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Colombo"}) : "—";
@@ -91,7 +91,7 @@
     try {
       const all=[
         state.client.from("branches").select("id,name").order("name"),
-        state.client.from("employees").select("id,staff_code,full_name,email,phone,designation,department,branch_id,joined_on,status,auth_user_id,national_id,address,date_of_birth,emergency_contact,employment_type,bank_name,bank_branch,bank_account,epf_no,etf_no,basic_salary,vehicle_allowance").order("full_name").limit(1000),
+        state.client.from("employees").select("id,staff_code,full_name,email,phone,designation,department,branch_id,joined_on,status,staff_group,auth_user_id,national_id,address,date_of_birth,emergency_contact,employment_type,bank_name,bank_branch,bank_account,epf_no,etf_no,basic_salary,vehicle_allowance").order("full_name").limit(1000),
         state.client.from("attendance").select("id,employee_id,work_date,check_in,check_out,mode").order("check_in",{ascending:false}).limit(500),
         state.client.from("leave_requests").select("id,employee_id,kind,from_date,to_date,reason,status").order("created_at",{ascending:false}).limit(500)
       ];
@@ -104,6 +104,9 @@
       all.push(state.client.from("kpis").select("id,employee_id,period_month,target_amount,achieved_amount,notes").order("period_month",{ascending:false}).limit(500));
       all.push(state.client.from("assets").select("id,asset_tag,description,assigned_to,status,notes").limit(500));
       all.push(state.client.from("letter_register").select("id,employee_id,letter_type,document_no,issued_on,status,notes").limit(500));
+      if(isHR())all.push(state.client.from("field_activity_reports")
+        .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
+        .order("created_at",{ascending:false}).limit(1500));
       const result=await Promise.all(all);
       for(const r of result)if(r.error)throw r.error;
       [state.branches,state.employees,state.attendance,state.leaves]=result.slice(0,4).map(r=>r.data||[]);
@@ -116,6 +119,7 @@
       state.kpis=result[at++].data||[];
       state.assets=result[at++].data||[];
       state.letters=result[at++].data||[];
+      state.fieldReports=isHR()?result[at++].data||[]:[];
       renderAll();
     } catch(err){console.error("Data access error",err);toast("Unable to load HR data: "+normalizeErr(err),true)}
     finally{state.loading=false}
@@ -130,16 +134,16 @@
     $("welcome-summary").textContent=isHR()?"HR access active. Company-wide records are available for your authorised role.":"Employee access active. Your personal records and leave requests are available.";
     $("branch-list").innerHTML=state.branches.length?state.branches.map(b=>'<div><b>'+esc(b.name)+'</b><span>'+state.employees.filter(e=>e.branch_id===b.id).length+' employees</span></div>').join(""):"No branches set up";
     renderEmployees();renderAttendance();renderLeave();renderCandidates();renderAccounts();
-    renderLocations();renderNotices();renderProfile();renderKpi();renderAssets();renderLetters();renderStaffAccounts();
+    renderLocations();renderFieldReports();renderNotices();renderProfile();renderKpi();renderAssets();renderLetters();renderStaffAccounts();
   }
   function switchView(view) {
-    if(["employees","recruitment","locations","kpi","assets","letters"].includes(view)&&!isHR())return toast("HR access required.",true);
+    if(["employees","recruitment","locations","field-work","kpi","assets","letters"].includes(view)&&!isHR())return toast("HR access required.",true);
     if(["accounts","staff-import"].includes(view)&&!isAdmin())return toast("Administrator access required.",true);
     if(!$( "view-"+view))return;
     state.view=view;
     document.querySelectorAll(".view").forEach(el=>el.classList.toggle("hidden",el.id!=="view-"+view));
     document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
+    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
     const t=titles[view];
     $("page-eyebrow").textContent=t[0];$("page-title").textContent=t[1];$("page-subtitle").textContent=t[2];$("crumb-label").textContent=t[1];
     document.querySelector(".sidebar").classList.remove("open");
@@ -147,7 +151,7 @@
   function renderEmployees() {
     const q=$("employee-search").value.toLowerCase();
     const rows=state.employees.filter(e=>!q||[e.full_name,e.staff_code,e.designation,branchName(e.branch_id)].join(" ").toLowerCase().includes(q));
-    $("employee-rows").innerHTML=rows.map(e=>'<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'<div class="muted">'+esc(e.phone||"")+'</div></td><td>'+esc(e.designation)+'</td><td>'+esc(branchName(e.branch_id))+'</td><td>'+fmtStatus(e.status)+'</td><td><button class="btn tiny outline" data-edit-employee="'+esc(e.id)+'">Edit</button></td></tr>').join("")||empty(6,"No employee records found");
+    $("employee-rows").innerHTML=rows.map(e=>'<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'<div class="muted">'+esc(e.phone||"")+'</div></td><td>'+esc(e.designation)+'</td><td>'+esc(e.staff_group||'office')+'</td><td>'+esc(branchName(e.branch_id))+'</td><td>'+fmtStatus(e.status)+'</td><td><button class="btn tiny outline" data-edit-employee="'+esc(e.id)+'">Edit</button></td></tr>').join("")||empty(7,"No employee records found");
   }
   function formValue(form,name){return form.elements.namedItem(name)?.value||""}
   function setFormValue(form,name,value){const e=form.elements.namedItem(name);if(e)e.value=value??""}
@@ -162,7 +166,7 @@
     fillBranchOptions();
     const e=state.employees.find(x=>x.id===id);
     const f=$("employee-form");f.reset();
-    ["id","staff_code","full_name","phone","designation","department","branch_id","joined_on","status"].forEach(k=>setFormValue(f,k,e?.[k]||(k==="status"?"active":"")));
+    ["id","staff_code","full_name","phone","designation","department","staff_group","branch_id","joined_on","status"].forEach(k=>setFormValue(f,k,e?.[k]||(k==="status"?"active":k==="staff_group"?"office":"")));
     $("employee-modal-title").textContent=e?"Edit employee":"New employee";
     $("employee-dialog").showModal();
   }
@@ -171,7 +175,7 @@
     const f=event.target,id=formValue(f,"id");
     if(!id)return toast("Create employee accounts through the Admin-only Staff Accounts panel.",true);
     const record={full_name:formValue(f,"full_name").trim(),phone:formValue(f,"phone").trim()||null,
-      designation:formValue(f,"designation").trim(),department:formValue(f,"department").trim()||null,
+      designation:formValue(f,"designation").trim(),department:formValue(f,"department").trim()||null,staff_group:formValue(f,"staff_group")||"office",
       branch_id:formValue(f,"branch_id"),joined_on:formValue(f,"joined_on")||null,status:formValue(f,"status")};
     const {error}=await state.client.from("employees").update(record).eq("id",id);
     if(error)return toast(normalizeErr(error),true);
@@ -179,13 +183,13 @@
   }
   function exportCSV() {
     if(!isHR())return;
-    const fields=["staff_code","full_name","email","designation","department","branch","joined_on","status"];
+    const fields=["staff_code","full_name","email","designation","department","staff_group","branch","joined_on","status"];
     const safe=value=>{
       let s=String(value??"");
       if(/^[\t\r=+\-@]/.test(s))s="'"+s;
       return '"'+s.replace(/"/g,'""')+'"';
     };
-    const rows=[fields,...state.employees.map(e=>[e.staff_code,e.full_name,e.email,e.designation,e.department,branchName(e.branch_id),e.joined_on,e.status])];
+    const rows=[fields,...state.employees.map(e=>[e.staff_code,e.full_name,e.email,e.designation,e.department,e.staff_group||"office",branchName(e.branch_id),e.joined_on,e.status])];
     const csv="\ufeff"+rows.map(r=>r.map(safe).join(",")).join("\r\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="prime-employee-directory-"+localDate()+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   }
@@ -342,6 +346,43 @@
       return '<tr><td><b>'+name+'</b><div class="muted">'+code+'</div></td><td>'+esc(l.event_type==="check_in"?"Check In":"Check Out")+'</td><td>'+esc(dateText(l.recorded_at))+' '+esc(timeText(l.recorded_at))+'</td><td>±'+esc(Math.round(l.accuracy_m))+' m</td><td><a class="map-link" href="'+link+'" target="_blank" rel="noopener noreferrer">📍 Open Maps</a></td></tr>';
     }).join("")||empty(5,"No GPS attendance records for this date");
   }
+
+  // Read-only HR view of discrete, employee-submitted Sales / Plantation work reports.
+  const groupName=group=>({sales:"Sales",plantation:"Plantation",office:"Office"}[group]||group);
+  const fieldTypeName=type=>String(type||"").replaceAll("_"," ").replace(/\b\w/g,m=>m.toUpperCase());
+  function filteredFieldReports(){
+    if(!isHR())return [];
+    const team=$("field-team-filter").value,selectedDay=$("field-date-filter").value;
+    return state.fieldReports.filter(x=>(!team||x.staff_group===team)&&
+      (!selectedDay||new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"})
+        .format(new Date(x.created_at))===selectedDay));
+  }
+  function renderFieldReports(){
+    if(!isHR())return;
+    $("field-report-rows").innerHTML=filteredFieldReports().map(x=>{
+      const emp=state.employees.find(e=>e.id===x.employee_id);
+      const point=Number(x.latitude)+","+Number(x.longitude);
+      const link="https://www.google.com/maps?q="+encodeURIComponent(point);
+      return '<tr><td>'+esc(dateText(x.created_at))+' '+esc(timeText(x.created_at))+'</td>'+
+        '<td><b>'+esc(emp?.full_name||"Unknown")+'</b><div class="muted">'+esc(emp?.staff_code||"")+'</div></td>'+
+        '<td>'+esc(groupName(x.staff_group))+'</td><td>'+esc(fieldTypeName(x.activity_type))+'</td>'+
+        '<td>'+esc(x.location_name)+'</td><td>'+esc(x.notes||"—")+'</td>'+
+        '<td><a class="map-link" target="_blank" rel="noopener noreferrer" href="'+link+'">Map</a> <span class="muted">±'+esc(Math.round(x.accuracy_m))+' m</span></td></tr>';
+    }).join("")||empty(7,"No work reports for these filters.");
+  }
+  function exportFieldReports(){
+    if(!isHR())return;
+    const records=filteredFieldReports().map(x=>{
+      const emp=state.employees.find(e=>e.id===x.employee_id);
+      return {
+        date_time:x.created_at,employee_no:emp?.staff_code||"",employee_name:emp?.full_name||"",
+        team:x.staff_group,activity_type:x.activity_type,client_or_site:x.location_name,
+        notes:x.notes||"",latitude:x.latitude,longitude:x.longitude,accuracy_m:x.accuracy_m
+      };
+    });
+    staffCSV(records,["date_time","employee_no","employee_name","team","activity_type","client_or_site","notes","latitude","longitude","accuracy_m"],"PRIME_Field_Work_"+localDate()+".csv");
+  }
+
   function exportLocations(){
     if(!isHR())return;
     const header=["staff_code","employee","event","timestamp","latitude","longitude","accuracy_m"];
@@ -435,7 +476,7 @@
 
   // Admin-only staff import and account provisioning.
   const staffColumns=[
-    "staff_code","full_name","phone","designation","department","branch","joined_on",
+    "staff_code","full_name","phone","designation","department","staff_group","branch","joined_on",
     "status","national_id","address","date_of_birth","emergency_contact","employment_type",
     "bank_name","bank_branch","bank_account","epf_no","etf_no","basic_salary","vehicle_allowance"
   ];
@@ -448,7 +489,7 @@
       phone:"phone",phoneno:"phone",telephone:"phone",contact:"phone",
       mobile:"phone",mobileno:"phone",mobilenumber:"phone",contactno:"phone",contactnumber:"phone",whatsapp:"phone",
       designation:"designation",position:"designation",jobtitle:"designation",jobrole:"designation",
-      department:"department",dept:"department",
+      department:"department",dept:"department",staffgroup:"staff_group",staffteam:"staff_group",team:"staff_group",teamtype:"staff_group",group:"staff_group",
       branch:"branch",branchname:"branch",office:"branch",zone:"branch",zonal:"branch",
       joiningdate:"joined_on",joinedon:"joined_on",dateofjoining:"joined_on",startdate:"joined_on",appointeddate:"joined_on",
       status:"status",employmentstatus:"status",
@@ -492,6 +533,7 @@
     if(mapped.joined_on)mapped.joined_on=excelDate(mapped.joined_on);
     if(mapped.date_of_birth)mapped.date_of_birth=excelDate(mapped.date_of_birth);
     mapped.status=mapped.status?String(mapped.status).toLowerCase():"";
+    mapped.staff_group=String(mapped.staff_group||"").toLowerCase().trim();
     return mapped;
   }
   function renderStaffPreview(){
@@ -499,8 +541,8 @@
     $("staff-file-status").textContent=rows.length+" employee row(s) prepared for Admin import.";
     $("staff-import-btn").disabled=!rows.length||state.staffImportProgress;
     const display=rows.slice(0,25);
-    $("staff-preview").innerHTML=rows.length?'<table><thead><tr><th>Employee No.</th><th>Full Name</th><th>Phone</th><th>Designation</th><th>Branch</th></tr></thead><tbody>'+
-      display.map(r=>'<tr><td>'+esc(r.staff_code)+'</td><td>'+esc(r.full_name)+'</td><td>'+esc(r.phone||"—")+'</td><td>'+esc(r.designation)+'</td><td>'+esc(r.branch)+'</td></tr>').join("")+
+    $("staff-preview").innerHTML=rows.length?'<table><thead><tr><th>Employee No.</th><th>Full Name</th><th>Phone</th><th>Designation</th><th>Team</th><th>Branch</th></tr></thead><tbody>'+
+      display.map(r=>'<tr><td>'+esc(r.staff_code)+'</td><td>'+esc(r.full_name)+'</td><td>'+esc(r.phone||"—")+'</td><td>'+esc(r.designation)+'</td><td>'+esc(r.staff_group||'office')+'</td><td>'+esc(r.branch)+'</td></tr>').join("")+
       '</tbody></table><p class="fineprint">'+(rows.length>25?"First 25 rows previewed. All "+rows.length+" will be submitted.":"Review the rows before you create accounts.")+'</p>':"";
   }
   async function readStaffFile(event){
@@ -518,6 +560,8 @@
       if(rows.length>1000)throw Error("Import maximum is 1,000 staff per file.");
       const missing=rows.findIndex(r=>!r.staff_code||!r.full_name||!r.designation||!r.branch);
       if(missing>=0)throw Error("Row "+(missing+2)+" missing Employee Number, Name, Designation or Branch.");
+      const badTeam=rows.findIndex(r=>r.staff_group&&!["office","sales","plantation"].includes(r.staff_group));
+      if(badTeam>=0)throw Error("Row "+(badTeam+2)+" has an invalid Team. Choose office, sales or plantation.");
       const codes=new Set(rows.map(r=>r.staff_code));
       if(codes.size!==rows.length)throw Error("Duplicate employee numbers found in Excel.");
       state.staffUploadRows=rows;renderStaffPreview();
@@ -540,7 +584,7 @@
       XLSX.utils.book_append_sheet(wb,sheet,"Employees");
       const info=XLSX.utils.aoa_to_sheet([
         ["PRIME HR — Employee Bulk Import"],
-        ["Mandatory fields: staff_code,full_name,designation,branch."],
+        ["Mandatory fields: staff_code,full_name,designation,branch."],["staff_group (Team): office / sales / plantation. Default office for new staff."],
         ["Employee Number is the login ID. Email is NOT required."],
         ["Phone,NIC and Bank Account columns should be formatted as TEXT to keep leading zeros."],
         ["Dates must use YYYY-MM-DD. The Admin imports accounts, staff cannot self-register."],
@@ -661,6 +705,9 @@
     $("toggle-auth").addEventListener("click",toggleAuth);
     ["logout","pending-logout"].forEach(id=>$(id).addEventListener("click",async()=>{await state.client.auth.signOut();state.user=null;state.profile=null;screen("auth-screen")}));
     $("refresh").addEventListener("click",fetchData);
+    $("field-team-filter").addEventListener("change",renderFieldReports);
+    $("field-date-filter").addEventListener("change",renderFieldReports);
+    $("field-export").addEventListener("click",exportFieldReports);
     $("nav").addEventListener("click",e=>{const b=e.target.closest("[data-view]");if(b)switchView(b.dataset.view)});
     $("workspace").addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b)switchView(b.dataset.go)});
     $("menu-toggle").addEventListener("click",()=>document.querySelector(".sidebar").classList.toggle("open"));

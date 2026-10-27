@@ -6,7 +6,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],busy:false,screen:"home",installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
+const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],fieldReports:[],busy:false,fieldBusy:false,screen:"home",installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const time=s=>s?new Date(s).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Colombo"}):"—";
 const day=s=>s?String(s).slice(0,10):"—";
@@ -17,7 +17,7 @@ function view(name){
 }
 function page(name){
  state.screen=name;
- ["home","attendance","leave","notices","profile"].forEach(n=>$("page"+n[0].toUpperCase()+n.slice(1)).classList.toggle("hidden",n!==name));
+ ["home","attendance","field","leave","notices","profile"].forEach(n=>$("page"+n[0].toUpperCase()+n.slice(1)).classList.toggle("hidden",n!==name));
  document.querySelectorAll("[data-screen]").forEach(b=>b.classList.toggle("active",b.dataset.screen===name));
  window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -30,7 +30,7 @@ async function loadData(){
  const user=state.user;if(!user)return;
  const tasks=[
   state.client.from("profiles").select("id,email,full_name,role,is_active,must_change_password").eq("id",user.id).maybeSingle(),
-  state.client.from("employees").select("id,staff_code,full_name,phone,designation,department,branch_id,status,joined_on").eq("auth_user_id",user.id).maybeSingle()
+  state.client.from("employees").select("id,staff_code,full_name,phone,designation,department,branch_id,status,joined_on,staff_group").eq("auth_user_id",user.id).maybeSingle()
  ];
  const results=await Promise.all(tasks);
  if(results.some(r=>r.error))throw Error(results.find(r=>r.error).error.message);
@@ -42,10 +42,14 @@ async function loadData(){
   state.client.from("attendance").select("id,work_date,check_in,check_out,mode").eq("employee_id",state.employee.id).order("work_date",{ascending:false}).limit(100),
   state.client.from("leave_requests").select("id,kind,from_date,to_date,reason,status").eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100),
   state.client.from("hr_notices").select("id,title,content,published,created_at").eq("published",true).order("created_at",{ascending:false}).limit(100),
-  state.client.from("notice_reads").select("notice_id,acknowledged_at").eq("employee_user_id",user.id).limit(500)
+  state.client.from("notice_reads").select("notice_id,acknowledged_at").eq("employee_user_id",user.id).limit(500),
+  ...(state.employee.staff_group!=="office" ? [state.client.from("field_activity_reports")
+    .select("id,activity_type,location_name,notes,created_at,staff_group")
+    .eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)] : [])
  ]);
  if(res.some(r=>r.error))throw Error(res.find(r=>r.error).error.message);
- [state.attendance,state.leaves,state.notices,state.reads]=res.map(r=>r.data||[]);
+ [state.attendance,state.leaves,state.notices,state.reads]=res.slice(0,4).map(r=>r.data||[]);
+ state.fieldReports=res[4]?.data||[];
  render();view("appScreen");page(state.screen||"home");
 }
 function render(){
@@ -54,6 +58,32 @@ function render(){
  $("mobileSubtitle").textContent=e.designation+" · "+e.staff_code;
  $("todayDate").textContent=today();$("homeStaffNo").textContent=e.staff_code;
  $("homeDetails").textContent=e.full_name+" · "+e.designation+" · "+(e.phone||"Phone not recorded");
+ const group=["office","sales","plantation"].includes(e.staff_group)?e.staff_group:"office";
+ const isField=group!=="office";
+ const groupLabel={office:"Office Staff",sales:"Sales Team",plantation:"Plantation Team"}[group];
+ $("homeTeam").textContent="Team: "+groupLabel;
+ $("homeFieldAction").classList.toggle("hidden",!isField);
+ $("navField").classList.toggle("hidden",!isField);
+ $("workMode").value=isField?"field":"office";
+ $("fieldTitle").textContent=group==="sales"?"Sales Work Updates":"Plantation Work Updates";
+ $("fieldLocationLabel").firstChild.textContent=group==="sales"?"Customer / Visit Location":"Estate / Site Name";
+ if($("fieldActivityType").dataset.team!==group){
+   const types=group==="sales"?[
+     ["customer_visit","Customer Visit"],["prospecting","Prospecting"],["follow_up","Follow-up"],["collection","Collection"],["other_sales","Other Sales Work"]
+   ]:group==="plantation"?[
+     ["site_visit","Site Visit"],["field_inspection","Field Inspection"],["planting","Planting Work"],["maintenance","Maintenance"],["other_plantation","Other Plantation Work"]
+   ]:[];
+   $("fieldActivityType").innerHTML=types.map(([v,n])=>'<option value="'+v+'">'+n+'</option>').join("");
+   $("fieldActivityType").dataset.team=group;
+ }
+ const isCurrentlyWorking=state.attendance.some(a=>a.work_date===today()&&a.check_in&&!a.check_out);
+ $("fieldSubmit").disabled=!isField||state.fieldBusy||!isCurrentlyWorking||state.locationPermission==="denied";
+ $("fieldAccessMessage").textContent=!isField?"Only Sales and Plantation staff can submit field reports.":
+   !isCurrentlyWorking?"First Check In to submit a work update.":
+   state.locationPermission==="denied"?"Allow phone Location to submit a work update.":"";
+ $("fieldReportHistory").innerHTML=state.fieldReports.length?state.fieldReports.map(x=>
+   '<div class="entry"><div class="row"><b>'+safe(x.location_name)+'</b><span class="chip">'+safe(x.activity_type.replaceAll("_"," "))+'</span></div><p>'+safe(new Date(x.created_at).toLocaleString("en-GB",{timeZone:"Asia/Colombo"}))+'</p>'+(x.notes?'<p>'+safe(x.notes)+'</p>':"")+'</div>'
+ ).join(""):'<p class="soft">No work updates submitted yet.</p>';
  const record=state.attendance.find(a=>a.work_date===today());
  const locationBlocked=state.locationPermission==="denied";
  $("attendanceAccessMessage").textContent=locationBlocked
@@ -140,6 +170,32 @@ function gps(){
   },
   {enableHighAccuracy:true,maximumAge:0,timeout:20000});
  });
+}
+async function submitFieldReport(ev){
+ ev.preventDefault();
+ if(state.fieldBusy||!state.employee||!["sales","plantation"].includes(state.employee.staff_group))return;
+ const activeToday=state.attendance.some(a=>a.work_date===today()&&a.check_in&&!a.check_out);
+ if(!activeToday)return toast("Check In before submitting a field work update.");
+ if(state.locationPermission==="denied")return toast("Location Allow is required to save the work update.");
+ const f=new FormData(ev.target);
+ const location_name=String(f.get("location_name")||"").trim();
+ const notes=String(f.get("notes")||"").trim();
+ if(location_name.length<2||location_name.length>180)return toast("Enter a customer or site name.");
+ if(notes.length>1000)return toast("Notes are too long.");
+ const activity_type=String(f.get("activity_type")||"");
+ state.fieldBusy=true;render();
+ try{
+   const p=await gps();
+   const {error}=await state.client.from("field_activity_reports").insert({
+    employee_id:state.employee.id,staff_group:state.employee.staff_group,
+    activity_type,location_name,notes:notes||null,latitude:p.latitude,longitude:p.longitude,accuracy_m:p.accuracy
+   });
+   if(error)throw Error(error.message);
+   ev.target.reset();
+   toast("Work update saved.");
+   await loadData();
+ }catch(err){toast(err.message);await observeLocationPermission()}
+ finally{state.fieldBusy=false;render()}
 }
 async function markAttendance(action){
  if(state.busy||!state.employee)return;
@@ -232,6 +288,7 @@ async function init(){
  $("employeeLogin").addEventListener("submit",login);
  $("passwordForm").addEventListener("submit",passwordChange);
  $("leaveForm").addEventListener("submit",leave);
+ $("fieldForm").addEventListener("submit",submitFieldReport);
 
  $("employeeCheckIn").addEventListener("click",()=>markAttendance("check_in"));
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));

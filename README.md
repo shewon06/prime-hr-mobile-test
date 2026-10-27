@@ -63,3 +63,17 @@ Project: Supabase ref `qkhcojaouueypkgrzlov`, India Mumbai region. Public source
 - Mobile Employee Portal removes Sign Out buttons and persists the Supabase Auth session using localStorage with automatic token refresh. Closing and reopening the app normally remains signed in; server-side token expiration, revoked access, manually cleared app/browser data, OS eviction, reinstallations or changing browsers may still require a new login. Admin can disable access. This is not a guarantee of permanent login.
 - Admin can click **View Password** to reveal/copy the most recently created or reset employee password **in the current Admin browser session**. The employee's existing password **cannot** be recovered from Supabase Auth hashes. If Admin reloads or has not provisioned/reset the account this session, use **Reset Password** to issue a new one. Passwords must never be saved in plaintext in the HR database.
 - Employee sessions are not continuous tracking or employee-location telemetry.
+
+
+## Staff Team Attendance + Field Work Reports (27 October 2026)
+The Admin staff master has a \`staff_group\` value: \`office\`, \`sales\`, \`plantation\`.
+- \`office\`: normal mobile Check In / Check Out only.
+- \`sales\`: mobile Check In / Check Out + separate, staff-initiated Customer Visit, Prospecting, Follow-up, Collection, Other Sales Work reports.
+- \`plantation\`: mobile Check In / Check Out + separate, staff-initiated Site Visit, Field Inspection, Planting, Maintenance, Other Plantation Work reports.
+- The active employee account's group is defined by Admin, not selected by the employee on the phone. Excel \`staff_group\` (alias: Team) and Admin Add/Edit screens support all three groups. When group is omitted from a NEW record, it defaults to \`office\`; when missing during re-import it does not overwrite an existing group.
+- A work update captures work type, client/site name, optional notes, its server timestamp, and a single location snapshot upon explicit submission. No background location collection. HR/Admin can filter by team/date and export CSV.
+- A work update requires an approved active Sales or Plantation account and an open check-in for today, enforced by RLS against the current user and attendance. The field reports table is append-only for employees; no employee edits/deletes. Admin view is read-only.
+- Existing employees default to Office until an Admin assigns them to another Team.
+- CSV formula injection protection applies to exported reports. Do not treat a web GPS coordinate as proof of location; phones can be spoofed.
+- New DB schema applied as \`prime_hr_staff_groups_field_activity_reports\` and \`prime_hr_field_activity_requires_active_check_in\`.
+- New live Admin provisioning Edge Function v5 accepts \`staff_group\` via manual creation or Excel import.
