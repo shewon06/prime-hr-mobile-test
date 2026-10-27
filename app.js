@@ -610,6 +610,19 @@
     const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=filename;link.click();
     setTimeout(()=>URL.revokeObjectURL(link.href),1000);
   }
+
+  function exportCompleteStaffMaster(){
+    if(!isAdmin())return toast("Administrator access required.",true);
+    if(!confirm("Export the complete staff master including NIC, salary and bank details? Store this sensitive file securely."))return;
+    const fields=["staff_code","full_name","phone","designation","department","staff_group","branch","joined_on","status",
+      "national_id","address","date_of_birth","emergency_contact","employment_type",
+      "bank_name","bank_branch","bank_account","epf_no","etf_no","basic_salary","vehicle_allowance"];
+    const records=state.employees.map(e=>({
+      ...e,staff_group:e.staff_group||"office",branch:branchName(e.branch_id)
+    }));
+    staffCSV(records,fields,"PRIME_Full_Staff_Master_"+localDate()+".csv");
+    toast("Complete staff master exported. Protect the downloaded file.");
+  }
   function downloadStaffTemplate(){
     if(window.XLSX){
       const wb=XLSX.utils.book_new(),sheet=XLSX.utils.aoa_to_sheet([staffColumns]);
@@ -1144,6 +1157,7 @@
     $("staff-new-open").addEventListener("click",openStaffAdd);
     $("staff-add-form").addEventListener("submit",staffAdd);
     $("staff-template").addEventListener("click",downloadStaffTemplate);
+    $("staff-master-export").addEventListener("click",exportCompleteStaffMaster);
     $("staff-file").addEventListener("change",readStaffFile);
     $("staff-import-btn").addEventListener("click",()=>processStaffRecords(state.staffUploadRows));
     $("staff-clear").addEventListener("click",()=>{state.staffUploadRows=[];$("staff-file").value="";renderStaffPreview()});
