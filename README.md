@@ -18,13 +18,13 @@ Staff use their EMPLOYEE NUMBER and PASSWORD in the Mobile App.
 4. Required columns: `staff_code` (or `employee_no`), `full_name`, `designation`, `branch`.
 5. Supported optional fields: `phone`, `department`, `joined_on`, `status`, `national_id`, `address`, `date_of_birth`, `emergency_contact`, `employment_type`, `bank_name`, `bank_branch`, `bank_account`, `epf_no`, `etf_no`, `basic_salary`, `vehicle_allowance`.
 6. Preview staff entries and press **Import All Staff & Create Logins**.
-7. The Admin-only Supabase Edge Function processes batches of 25. On first creation it returns a cryptographically generated one-time temporary password per employee.
+7. The Admin-only Supabase Edge Function processes batches of 25. On first creation it returns an individually generated initial password using cryptographic randomness, displayed only once to Admin.
 8. Download the new credentials CSV once and hand the correct individual password **privately** to each employee. Never share the group password list in a chat group or upload it to GitHub.
 9. On an existing staff number, re-import updates master details without resetting passwords. The Admin can separately reset a staff password, disable or enable login.
 
 Employee numbers must be 2–25 characters, letters/digits plus `_` and `-`. They are immutable once linked to an Auth identity.
 
-The mobile app forces a password change the first time a staff member signs in using their temporary password, using a secured server-side action with current-password verification.
+The employee mobile app does not require a password change at first login. Admin generates unique passwords for employees, and staff can optionally change them from Profile. Admin can reset passwords if needed.
 
 ## Modules
 - Employee Master and secure account management
