@@ -55,3 +55,11 @@ This is a working code release, but NOT yet independently end-to-end tested with
 You can configure a company-owned domain for the Netlify site. Existing WON MART site and domain DNS were not changed.
 
 Project: Supabase ref `qkhcojaouueypkgrzlov`, India Mumbai region. Public sources are in this repository; service-role secrets are injected by Supabase Edge environment only.
+
+
+## October 27, 2026: employee session, native location and Admin UI improvements
+- Admin sidebar independently scrolls vertically, including at 100% browser zoom and on short laptop screens.
+- When an approved staff member logs in, the browser's **native** geolocation permission request is attempted once per employee/device. There is no custom onboarding alert. Browsers may restrict a permission prompt if it lacks user activation or if the device denied it; the **Enable Location** button remains as a browser-approved fallback. Location is recorded **only** during Check In or Check Out, never during login or in the background.
+- Mobile Employee Portal removes Sign Out buttons and persists the Supabase Auth session using localStorage with automatic token refresh. Closing and reopening the app normally remains signed in; server-side token expiration, revoked access, manually cleared app/browser data, OS eviction, reinstallations or changing browsers may still require a new login. Admin can disable access. This is not a guarantee of permanent login.
+- Admin can click **View Password** to reveal/copy the most recently created or reset employee password **in the current Admin browser session**. The employee's existing password **cannot** be recovered from Supabase Auth hashes. If Admin reloads or has not provisioned/reset the account this session, use **Reset Password** to issue a new one. Passwords must never be saved in plaintext in the HR database.
+- Employee sessions are not continuous tracking or employee-location telemetry.

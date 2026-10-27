@@ -91,7 +91,15 @@
  <article class="panel"><div class="panel-head"><h3>New Login Credentials</h3><button class="btn outline" id="staff-credentials-download" disabled>↓ Download Once</button></div><p class="fineprint">Each employee gets a unique, easy-to-type password. No first-login change is required. Share each password privately. Admin can reset it later.</p><div class="table-scroll"><table><thead><tr><th>Employee No.</th><th>Name</th><th>Result</th><th>Initial Password</th></tr></thead><tbody id="staff-import-results"></tbody></table></div></article></div>
  <article class="panel"><div class="panel-head"><h3>Manage Employee Logins</h3></div><div class="toolbar"><input id="staff-account-search" placeholder="Search by employee number, name, phone"></div><div class="table-scroll"><table><thead><tr><th>Employee No.</th><th>Name</th><th>Phone</th><th>Login</th><th>Actions</th></tr></thead><tbody id="staff-account-rows"></tbody></table></div></article>
  </section>
- <section id="view-attendance" class="view hidden">
+ <dialog id="staff-password-dialog" class="dialog"><div class="dialog-body">
+<div class="panel-head"><h3>Employee Password — Admin Only</h3><button class="close" type="button" data-close="staff-password-dialog">✕</button></div>
+<p class="fineprint" id="staff-password-employee">Employee</p>
+<label>Last Generated Password (this Admin session)<input id="staff-password-value" type="password" readonly autocomplete="off" aria-label="Employee password"></label>
+<div class="button-row"><button id="staff-password-show" type="button" class="btn outline">Show Password</button><button id="staff-password-copy" type="button" class="btn primary">Copy Password</button></div>
+<p class="fineprint">Existing passwords cannot be recovered from Supabase Auth because they are hashed. If a password is not available in this Admin session, use Reset Password to issue a new one. Passwords are not stored in browser storage or the HR database.</p>
+<button type="button" class="btn outline" data-close="staff-password-dialog">Close</button>
+</div></dialog>
+<section id="view-attendance" class="view hidden">
         <div class="split"><article class="panel"><div class="panel-head"><h3>My attendance</h3><span class="pill" id="attendance-state">NOT CHECKED IN</span></div><p id="attendance-info" class="muted">Attendance uses secure server timestamps (Sri Lanka local work date).</p><div class="button-row"><button class="btn primary" id="checkin">Check in</button><button class="btn outline" id="checkout">Check out</button></div><label class="mode-picker">Work location
             <select id="attendance-mode"><option value="office">Office</option><option value="field">Field / Customer Visit</option></select>
             </label>

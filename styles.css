@@ -41,3 +41,9 @@ input,select,textarea{background:#fff;width:100%;border:1px solid #dae6df;border
 #view-staff-import input[type=file]{width:100%;max-width:420px;padding:12px;border:1px dashed #a6beaa;border-radius:10px;background:#f7faf8;margin-top:9px}
 #view-staff-import .table-scroll{overflow:auto}
 @media(max-width:900px){#view-staff-import .button-row{flex-wrap:wrap}#view-staff-import .split{display:grid;grid-template-columns:minmax(0,1fr)}}
+
+/* Independently scrollable Admin menu at 100% zoom and on small-height screens. */
+.sidebar{height:100vh;height:100dvh;max-height:100dvh;overflow-y:auto;overflow-x:hidden;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:#4d7b64 #0d2922}
+.sidebar::-webkit-scrollbar{width:7px}.sidebar::-webkit-scrollbar-thumb{background:#4d7b64;border-radius:8px}.sidebar::-webkit-scrollbar-track{background:#0d2922}
+.sidebar-brand,.sidebar-caption,.sidebar-bottom{flex-shrink:0}.sidebar nav{flex:0 0 auto;min-height:max-content}.sidebar-bottom{margin-top:16px}
+@media(max-width:750px){.sidebar{height:100dvh;max-height:100dvh;overflow-y:auto}}

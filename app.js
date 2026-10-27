@@ -561,9 +561,29 @@
     if(data?.error)throw Error(data.error);
     return data;
   }
+  // Passwords cannot be retrieved from Supabase Auth: only the last credentials
+  // generated/reset by this Admin session are available, in volatile memory.
+  function lastGeneratedPassword(staffCode){
+    return [...state.staffCredentials].reverse().find(c=>c.staff_code===staffCode&&c.password)?.password||"";
+  }
+  function showStaffPassword(staffCode){
+    if(!isAdmin())return;
+    const emp=state.employees.find(e=>e.staff_code===staffCode);
+    const password=lastGeneratedPassword(staffCode);
+    if(!password){
+      toast("Earlier passwords are securely hashed and cannot be retrieved. Click Reset Password to issue a new one.",true);
+      return;
+    }
+    $("staff-password-employee").textContent=(emp?.full_name||staffCode)+" · "+staffCode;
+    $("staff-password-value").value=password;
+    $("staff-password-value").type="password";
+    $("staff-password-show").textContent="Show Password";
+    $("staff-password-dialog").showModal();
+  }
   function renderCredentialResults(){
     $("staff-import-results").innerHTML=state.staffCredentials.map(c=>
-      '<tr><td><b>'+esc(c.staff_code||"—")+'</b></td><td>'+esc(c.full_name||"")+'</td><td>'+esc(c.result)+'</td><td><code>'+esc(c.password||c.message||"—")+'</code></td></tr>').join("")||empty(4,"No new employee logins created during this session.");
+      '<tr><td><b>'+esc(c.staff_code||"—")+'</b></td><td>'+esc(c.full_name||"")+'</td><td>'+esc(c.result)+'</td><td>'+
+      (c.password?'<button type="button" class="btn tiny outline" data-staff-show="'+esc(c.staff_code)+'">View / Copy</button>':esc(c.message||"—"))+'</td></tr>').join("")||empty(4,"No new employee logins created during this session.");
     $("staff-credentials-download").disabled=!state.staffCredentials.some(c=>c.password);
   }
   async function processStaffRecords(rows){
@@ -607,7 +627,7 @@
       const active=!!p?.is_active;
       const status=!e.auth_user_id?"No login":active?(p?.must_change_password?"Temp password":"Active"):"Disabled";
       return '<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'</td><td>'+esc(e.phone||"—")+'</td><td>'+esc(status)+'</td><td>'+
-       (e.auth_user_id?'<button class="btn tiny outline" data-staff-reset="'+esc(e.id)+'">Reset Password</button> <button class="btn tiny '+(active?'danger':'primary')+'" data-staff-toggle="'+esc(e.id)+'" data-staff-enable="'+(!active)+'">'+(active?"Disable":"Enable")+'</button>':
+       (e.auth_user_id?(lastGeneratedPassword(e.staff_code)?'<button class="btn tiny outline" data-staff-show="'+esc(e.staff_code)+'">View Password</button> ':'')+'<button class="btn tiny outline" data-staff-reset="'+esc(e.id)+'">Reset Password</button> <button class="btn tiny '+(active?'danger':'primary')+'" data-staff-toggle="'+esc(e.id)+'" data-staff-enable="'+(!active)+'">'+(active?"Disable":"Enable")+'</button>':
         '<button class="btn tiny primary" data-staff-repair="'+esc(e.id)+'">Create Login</button>')+'</td></tr>';
     }).join("")||empty(5,"No employee accounts found.");
   }
@@ -619,7 +639,7 @@
       try{
         const r=await staffCall({action:"reset_password",employee_id:id});
         state.staffCredentials.push({staff_code:emp.staff_code,full_name:emp.full_name,result:"password reset",password:r.password});
-        renderCredentialResults();toast("Password reset. Save and share this temporary password privately.");await fetchData();
+        renderCredentialResults();toast("New password generated. View and share privately.");await fetchData();showStaffPassword(emp.staff_code);
       }catch(err){toast(normalizeErr(err),true)}
     }
     if(action==="set_access"){
@@ -654,6 +674,17 @@
     $("staff-refresh").addEventListener("click",fetchData);
     $("staff-account-search").addEventListener("input",renderStaffAccounts);
     $("staff-credentials-download").addEventListener("click",()=>staffCSV(state.staffCredentials.filter(c=>c.password),["staff_code","full_name","password"],"PRIME_HR_ONE_TIME_CREDENTIALS.csv"));
+    $("staff-password-show").addEventListener("click",()=>{
+      const input=$("staff-password-value");
+      input.type=input.type==="password"?"text":"password";
+      $("staff-password-show").textContent=input.type==="password"?"Show Password":"Hide Password";
+    });
+    $("staff-password-copy").addEventListener("click",async()=>{
+      if(!isAdmin())return;
+      try{await navigator.clipboard.writeText($("staff-password-value").value);toast("Password copied. Share privately and clear clipboard after use.");}
+      catch{toast("Clipboard unavailable; use Show Password and select it.",true)}
+    });
+    $("staff-password-dialog").addEventListener("close",()=>{$("staff-password-value").value="";$("staff-password-value").type="password";});
     $("candidate-add").addEventListener("click",()=>editCandidate(""));
     $("employee-search").addEventListener("input",renderEmployees);
     $("employee-export").addEventListener("click",exportCSV);
@@ -683,6 +714,7 @@
       b=e.target.closest("[data-leave-action]");if(b)return decideLeave(b.dataset.leaveId,b.dataset.leaveAction);
       b=e.target.closest("[data-account-id]");if(b)return setApproval(b.dataset.accountId,b.dataset.accountActive==="true");
       b=e.target.closest("[data-ack]");if(b)return acknowledge(b.dataset.ack);
+      b=e.target.closest("[data-staff-show]");if(b)return showStaffPassword(b.dataset.staffShow);
       b=e.target.closest("[data-staff-reset]");if(b)return staffManage("reset_password",b.dataset.staffReset);
       b=e.target.closest("[data-staff-toggle]");if(b)return staffManage("set_access",b.dataset.staffToggle,b.dataset.staffEnable==="true");
       b=e.target.closest("[data-staff-repair]");if(b)return staffManage("repair",b.dataset.staffRepair);

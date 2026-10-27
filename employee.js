@@ -47,13 +47,6 @@ async function loadData(){
  if(res.some(r=>r.error))throw Error(res.find(r=>r.error).error.message);
  [state.attendance,state.leaves,state.notices,state.reads]=res.map(r=>r.data||[]);
  render();view("appScreen");page(state.screen||"home");
- const k="prime_emp_gps_intro_"+user.id;
- if(!localStorage.getItem(k)){
-   localStorage.setItem(k,"shown");
-   page("attendance");
-   $("gpsStatus").textContent="First time: tap Enable Location so GPS can be used during Check In / Check Out.";
-   toast("Please enable phone Location for GPS Attendance.");
- }
 }
 function render(){
  const e=state.employee;if(!e)return;
@@ -79,12 +72,29 @@ function render(){
  ["Designation",e.designation],["Department",e.department||"—"],["Joining Date",e.joined_on||"—"]];
  $("profileList").innerHTML=props.map(([k,v])=>'<div class="entry row"><span class="soft">'+safe(k)+'</span><strong>'+safe(v)+'</strong></div>').join("");
 }
+// Restore the saved Supabase session; opening and closing the app never calls signOut.
 async function checkSession(){
  const {data:{session},error}=await state.client.auth.getSession();
  if(error)throw error;
  if(!session){view("loginScreen");return}
  state.user=session.user;
  await loadData();
+ if(state.profile?.is_active && state.employee?.status==="active")requestNativeLocationOnce();
+}
+// Request the standard phone/browser permission exactly once for each installed
+// employee account. Login only asks permission; GPS is NOT recorded or sent to HR.
+// getCurrentPosition triggers the OS dialog; no custom alert/toast is displayed.
+function requestNativeLocationOnce(){
+ if(!state.user || !state.profile?.is_active || state.employee?.status!=="active")return;
+ if(!window.isSecureContext || !navigator.geolocation)return;
+ const key="prime_hr_location_requested_"+state.user.id;
+ if(localStorage.getItem(key)==="yes")return;
+ localStorage.setItem(key,"yes");
+ navigator.geolocation.getCurrentPosition(
+   pos=>{$("gpsStatus").textContent="Location permission available. Accuracy ±"+Math.round(pos.coords.accuracy)+" m.";},
+   ()=>{/* Browser permission denial is handled in phone settings or at attendance. */},
+   {enableHighAccuracy:true,maximumAge:0,timeout:20000}
+ );
 }
 function gps(){
  return new Promise((resolve,reject)=>{
@@ -128,6 +138,7 @@ async function login(ev){
   if(error)throw Error("Employee Number or password is incorrect.");
   if(!data.user)throw Error("Login failed.");
   state.user=data.user;await loadData();
+  if(state.profile?.is_active && state.employee?.status==="active")requestNativeLocationOnce();
  }catch(e){toast(e.message)}finally{b.disabled=false}
 }
 async function passwordChange(ev){
@@ -161,11 +172,6 @@ async function ack(id){
  if(error)return toast(error.message);
  toast("Notice acknowledged.");await loadData();
 }
-async function logout(){
- await state.client?.auth.signOut();
- state.user=null;state.profile=null;state.employee=null;state.screen="home";
- $("mobileGreeting").textContent="Employee Mobile App";view("loginScreen");
-}
 function setupInstall(){
  const already=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
  if(already){$("installApp").textContent="✓ App Installed";$("installApp").disabled=true}
@@ -195,14 +201,14 @@ async function init(){
  $("allowLocation").addEventListener("click",enableLocation);
  $("employeeCheckIn").addEventListener("click",()=>markAttendance("check_in"));
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));
- $("pendingLogout").addEventListener("click",logout);$("passwordLogout").addEventListener("click",logout);
- $("employeeLogout").addEventListener("click",logout);
+ // No employee sign-out: device stores the login session across app closes.
+ // Admin can revoke staff access server-side if their phone is lost.
  $("changePasswordButton").addEventListener("click",()=>view("passwordScreen"));
  document.querySelectorAll("[data-screen]").forEach(b=>b.addEventListener("click",()=>page(b.dataset.screen)));
  $("noticeList").addEventListener("click",e=>{const b=e.target.closest("[data-notice]");if(b)ack(b.dataset.notice)});
  const cfg=window.PRIME_HR_CONFIG||{};
  if(!cfg.supabaseUrl||!cfg.supabasePublishableKey||!window.supabase?.createClient){view("setupScreen");return}
- state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+ state.client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}});
  if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{});
  try{await checkSession()}catch(err){toast("Unable to load HR account: "+err.message);view("loginScreen")}
 }
