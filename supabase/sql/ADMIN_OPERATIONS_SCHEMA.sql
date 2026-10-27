@@ -176,3 +176,25 @@ end $$;
 revoke all on function private.prime_letter_draft_guard() from public,anon,authenticated;
 create trigger prime_letter_draft_guard before update on public.hr_letter_drafts
 for each row execute function private.prime_letter_draft_guard();
+
+
+-- Live migration: prime_hr_atomic_letter_issuance_register
+-- One DB transaction: letter can only become "issued" when the legacy
+-- letter_register record has also been written successfully.
+create or replace function private.prime_register_issued_letter()
+returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if old.status is distinct from 'issued' and new.status='issued' then
+  insert into public.letter_register(employee_id,letter_type,document_no,issued_on,status,notes)
+  values(
+   new.employee_id,new.subject,new.document_no,
+   (now() at time zone 'Asia/Colombo')::date,'issued',
+   'Issued from approved PRIME HR letter draft; immutable snapshot'
+  );
+ end if;
+ return new;
+end $$;
+revoke all on function private.prime_register_issued_letter() from public,anon,authenticated;
+create trigger prime_register_issued_letter
+ after update of status on public.hr_letter_drafts
+ for each row execute function private.prime_register_issued_letter();
