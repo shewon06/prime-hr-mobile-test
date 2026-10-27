@@ -161,7 +161,7 @@
   }
   function renderEmployees() {
     const q=$("employee-search").value.toLowerCase();
-    const rows=state.employees.filter(e=>!q||[e.full_name,e.staff_code,e.designation,branchName(e.branch_id)].join(" ").toLowerCase().includes(q));
+    const rows=state.employees.filter(e=>!q||[e.full_name,e.staff_code,e.designation,e.staff_group||"office",branchName(e.branch_id)].join(" ").toLowerCase().includes(q));
     $("employee-rows").innerHTML=rows.map(e=>'<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'<div class="muted">'+esc(e.phone||"")+'</div></td><td>'+esc(e.designation)+'</td><td>'+esc(e.staff_group||'office')+'</td><td>'+esc(branchName(e.branch_id))+'</td><td>'+fmtStatus(e.status)+'</td><td><button class="btn tiny outline" data-edit-employee="'+esc(e.id)+'">Edit</button></td></tr>').join("")||empty(7,"No employee records found");
   }
   function formValue(form,name){return form.elements.namedItem(name)?.value||""}
@@ -302,6 +302,10 @@
     toast("Leave request "+status+".");await fetchData();
   }
   function renderCandidates() {
+    if(isHR()){
+      const stages=["Applied","Screening","Interview","Offer","Hired","Rejected"];
+      $("recruitment-summary").textContent="Pipeline: "+stages.map(stage=>stage+" "+state.candidates.filter(c=>c.stage===stage).length).join(" · ");
+    }
     $("candidate-rows").innerHTML=state.candidates.map(c=>'<tr><td><b>'+esc(c.full_name)+'</b><div class="muted">'+esc(c.email||"")+'</div></td><td>'+esc(c.position)+'</td><td>'+esc(branchName(c.branch_id))+'</td><td>'+fmtStatus(c.stage)+'</td><td>'+esc(c.notes||"—")+'</td><td><button class="btn tiny outline" data-edit-candidate="'+esc(c.id)+'">Edit</button></td></tr>').join("")||empty(6,"No candidate records yet");
   }
   function editCandidate(id) {
@@ -435,6 +439,12 @@
   const money=n=>"Rs. "+Number(n||0).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2});
   function renderKpi(){
     if(!isHR())return;
+    const period=localDate().slice(0,7);
+    const rows=state.kpis.filter(k=>k.period_month.startsWith(period));
+    const target=rows.reduce((n,k)=>n+Number(k.target_amount||0),0);
+    const achieved=rows.reduce((n,k)=>n+Number(k.achieved_amount||0),0);
+    $("kpi-summary").textContent="Current month "+period+" · Target: "+money(target)+" · Achieved: "+money(achieved)+
+      " · Completion: "+(target?Math.round(100*achieved/target):0)+"%";
     $("kpi-rows").innerHTML=state.kpis.map(k=>{
       const pct=Number(k.target_amount)>0?Math.round(100*Number(k.achieved_amount)/Number(k.target_amount)):0;
       return '<tr><td>'+esc(employeeName(k.employee_id))+'</td><td>'+esc(dateText(k.period_month))+'</td><td class="stat-money">'+esc(money(k.target_amount))+'</td><td class="stat-money">'+esc(money(k.achieved_amount))+'</td><td>'+pct+'%</td></tr>';
@@ -442,6 +452,10 @@
   }
   function renderAssets(){
     if(!isHR())return;
+    $("asset-summary").textContent="Total "+state.assets.length+" · Assigned "+state.assets.filter(a=>a.status==="assigned").length+
+      " · Available "+state.assets.filter(a=>a.status==="available").length+
+      " · Repair "+state.assets.filter(a=>a.status==="repair").length+
+      " · Returned "+state.assets.filter(a=>a.status==="returned").length;
     $("asset-rows").innerHTML=state.assets.map(a=>'<tr><td>'+esc(a.asset_tag)+'</td><td>'+esc(a.description)+'</td><td>'+esc(a.assigned_to?employeeName(a.assigned_to):"Unassigned")+'</td><td>'+fmtStatus(a.status)+'</td><td><button class="btn tiny outline" data-asset-edit="'+esc(a.id)+'">Edit / Reassign</button></td></tr>').join("")||empty(5,"No assets in register");
   }
   function editAsset(id){
