@@ -6,7 +6,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],fieldReports:[],busy:false,fieldBusy:false,screen:"home",installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
+const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],fieldReports:[],notifications:[],alertChannel:null,alertChannelUser:null,alertsInitialized:false,busy:false,fieldBusy:false,screen:(location.hash==="#alerts"?"alerts":"home"),installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const time=s=>s?new Date(s).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Colombo"}):"—";
 const day=s=>s?String(s).slice(0,10):"—";
@@ -17,7 +17,7 @@ function view(name){
 }
 function page(name){
  state.screen=name;
- ["home","attendance","field","leave","notices","profile"].forEach(n=>$("page"+n[0].toUpperCase()+n.slice(1)).classList.toggle("hidden",n!==name));
+ ["home","attendance","field","leave","alerts","notices","profile"].forEach(n=>$("page"+n[0].toUpperCase()+n.slice(1)).classList.toggle("hidden",n!==name));
  document.querySelectorAll("[data-screen]").forEach(b=>b.classList.toggle("active",b.dataset.screen===name));
  window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -45,12 +45,18 @@ async function loadData(){
   state.client.from("notice_reads").select("notice_id,acknowledged_at").eq("employee_user_id",user.id).limit(500),
   ...(state.employee.staff_group!=="office" ? [state.client.from("field_activity_reports")
     .select("id,activity_type,location_name,notes,created_at,staff_group")
-    .eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)] : [])
+    .eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)] : []),
+  state.client.from("employee_notifications")
+    .select("id,kind,title,body,source_id,read_at,created_at")
+    .eq("recipient_id",user.id).order("created_at",{ascending:false}).limit(100)
  ]);
  if(res.some(r=>r.error))throw Error(res.find(r=>r.error).error.message);
  [state.attendance,state.leaves,state.notices,state.reads]=res.slice(0,4).map(r=>r.data||[]);
- state.fieldReports=res[4]?.data||[];
+ state.fieldReports=state.employee.staff_group!=="office"?(res[4]?.data||[]):[];
+ state.notifications=res[res.length-1]?.data||[];
+ state.alertsInitialized=true;
  render();view("appScreen");page(state.screen||"home");
+ subscribeToAlerts();
 }
 function render(){
  const e=state.employee;if(!e)return;
@@ -105,7 +111,126 @@ function render(){
  const props=[["Employee Number",e.staff_code],["Name",e.full_name],["Phone",e.phone||"—"],
  ["Designation",e.designation],["Department",e.department||"—"],["Joining Date",e.joined_on||"—"]];
  $("profileList").innerHTML=props.map(([k,v])=>'<div class="entry row"><span class="soft">'+safe(k)+'</span><strong>'+safe(v)+'</strong></div>').join("");
+ renderAlerts();
 }
+
+function renderAlerts(){
+ const unread=state.notifications.filter(n=>!n.read_at).length;
+ $("alertsUnreadCount").textContent=unread+" new";
+ $("homeUnreadCount").textContent=String(unread);
+ $("navUnreadCount").textContent=String(unread);
+ $("homeUnreadCount").classList.toggle("hidden",unread===0);
+ $("navUnreadCount").classList.toggle("hidden",unread===0);
+ if("setAppBadge" in navigator){
+  (unread?navigator.setAppBadge(unread):navigator.clearAppBadge?.())?.catch?.(()=>{});
+ }
+ $("alertsList").innerHTML=state.notifications.length?state.notifications.map(n=>{
+  const when=new Date(n.created_at).toLocaleString("en-GB",{timeZone:"Asia/Colombo"});
+  return '<article class="notice" style="'+(!n.read_at?'border-left:4px solid #176143;':'')+'">'+
+    '<div class="row"><h3>'+safe(n.title)+'</h3><span class="chip">'+(n.read_at?"Read":"New")+'</span></div>'+
+    '<small>'+safe(when)+'</small><p>'+safe(n.body)+'</p>'+
+    '<button class="btn outline" type="button" data-alert-open="'+safe(n.id)+'">'+
+       (n.kind==="hr_notice"?"Open Notice":"View Leave Request")+'</button></article>';
+ }).join(""):'<p class="soft">No notifications yet. Leave decisions and HR notices will appear here.</p>';
+ if(!("Notification" in window)){
+  $("alertsPermissionButton").disabled=true;
+  $("alertsPermissionStatus").textContent="System phone popups are not supported in this browser. In-app alerts still work.";
+  return;
+ }
+ const permission=Notification.permission;
+ $("alertsPermissionButton").disabled=permission==="granted";
+ $("alertsPermissionButton").textContent=permission==="granted"?"✓ Phone Alerts Enabled":"Enable Phone Alerts";
+ $("alertsPermissionStatus").textContent=permission==="granted"?
+  "Phone popups can appear while PRIME HR is running. App-closed push notifications require a separate push service.":
+  permission==="denied"?"Phone alerts are blocked in your browser settings. Your in-app inbox still works.":
+  "Tap Enable Phone Alerts to allow standard phone/browser alerts while the app is running.";
+}
+async function enablePhoneAlerts(){
+ if(!("Notification" in window))return toast("Phone notification permission is unsupported in this browser.");
+ try{
+  const permission=await Notification.requestPermission();
+  toast(permission==="granted"?"Phone alerts enabled.":"Phone alerts not enabled. You can still read the notification inbox.");
+ }catch(e){toast("Unable to enable phone alerts: "+e.message)}
+ renderAlerts();
+}
+async function showBrowserAlert(n){
+ if(!("Notification" in window)||Notification.permission!=="granted")return;
+ try{
+  const opt={body:n.body,icon:"./icon-192.png",badge:"./icon-192.png",tag:"prime-hr-"+n.id,data:{target:"alerts"}};
+  if("serviceWorker" in navigator){
+   const reg=await navigator.serviceWorker.getRegistration("./");
+   if(reg&&"showNotification" in reg){await reg.showNotification(n.title,opt);return}
+  }
+  const notice=new Notification(n.title,opt);
+  notice.onclick=()=>{window.focus();page("alerts");notice.close()};
+ }catch{/* All notifications are still available within the app inbox. */}
+}
+function acceptNewAlert(n){
+ if(!n?.id||state.notifications.some(x=>x.id===n.id))return;
+ state.notifications.unshift(n);
+ state.notifications=state.notifications.slice(0,100);
+ renderAlerts();
+ toast(n.title);
+ showBrowserAlert(n);
+ if(n.kind==="hr_notice"){
+  state.client.from("hr_notices").select("id,title,content,published,created_at")
+   .eq("published",true).order("created_at",{ascending:false}).limit(100)
+   .then(({data,error})=>{if(!error){state.notices=data||[];render()}});
+ }else{
+  state.client.from("leave_requests").select("id,kind,from_date,to_date,reason,status")
+   .eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)
+   .then(({data,error})=>{if(!error){state.leaves=data||[];render()}});
+ }
+}
+async function refreshAlerts(){
+ if(!state.user||!state.employee)return;
+ const {data,error}=await state.client.from("employee_notifications")
+  .select("id,kind,title,body,source_id,read_at,created_at")
+  .eq("recipient_id",state.user.id).order("created_at",{ascending:false}).limit(100);
+ if(error)return;
+ const known=new Set(state.notifications.map(n=>n.id));
+ const fresh=(data||[]).filter(n=>!known.has(n.id));
+ state.notifications=data||[];
+ renderAlerts();
+ if(state.alertsInitialized){
+  for(const n of fresh.slice(0,3)){toast(n.title);showBrowserAlert(n)}
+ }
+ state.alertsInitialized=true;
+ if(fresh.some(n=>n.kind==="hr_notice"||n.kind.startsWith("leave_"))){
+  const [notices,leaves]=await Promise.all([
+   state.client.from("hr_notices").select("id,title,content,published,created_at").eq("published",true).order("created_at",{ascending:false}).limit(100),
+   state.client.from("leave_requests").select("id,kind,from_date,to_date,reason,status").eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)
+  ]);
+  if(!notices.error)state.notices=notices.data||[];
+  if(!leaves.error)state.leaves=leaves.data||[];
+  render();
+ }
+}
+function subscribeToAlerts(){
+ if(!state.user||state.alertChannelUser===state.user.id)return;
+ if(state.alertChannel)state.client.removeChannel(state.alertChannel);
+ const uid=state.user.id;
+ state.alertChannelUser=uid;
+ state.alertChannel=state.client.channel("prime-employee-alerts-"+uid)
+   .on("postgres_changes",{
+     event:"INSERT",schema:"public",table:"employee_notifications",filter:"recipient_id=eq."+uid
+   },payload=>acceptNewAlert(payload.new))
+   .subscribe();
+}
+async function markAlertRead(id){
+ const n=state.notifications.find(n=>n.id===id);
+ if(!n)return;
+ if(!n.read_at){
+  const when=new Date().toISOString();
+  const {error}=await state.client.from("employee_notifications")
+   .update({read_at:when}).eq("id",id).eq("recipient_id",state.user.id);
+  if(error){toast("Unable to mark notification read: "+error.message);return}
+  n.read_at=when;
+  renderAlerts();
+ }
+ page(n.kind==="hr_notice"?"notices":"leave");
+}
+
 // Restore the saved Supabase session; opening and closing the app never calls signOut.
 async function checkSession(){
  const {data:{session},error}=await state.client.auth.getSession();
@@ -289,11 +414,24 @@ async function init(){
  $("passwordForm").addEventListener("submit",passwordChange);
  $("leaveForm").addEventListener("submit",leave);
  $("fieldForm").addEventListener("submit",submitFieldReport);
+ $("alertsPermissionButton").addEventListener("click",enablePhoneAlerts);
+ $("alertsList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-alert-open]");
+  if(b)markAlertRead(b.dataset.alertOpen);
+ });
 
  $("employeeCheckIn").addEventListener("click",()=>markAttendance("check_in"));
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));
  document.addEventListener("visibilitychange",()=>{
-   if(document.visibilityState==="visible"&&state.user&&state.employee)observeLocationPermission();
+   if(document.visibilityState==="visible"&&state.user&&state.employee){
+    observeLocationPermission();
+    refreshAlerts();
+   }
+ });
+ // Fallback check for browsers where Realtime is suspended.
+ window.setInterval(()=>{if(!document.hidden&&state.user&&state.employee)refreshAlerts()},60000);
+ if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",event=>{
+  if(event.data?.type==="PRIME_HR_OPEN_ALERTS"&&state.employee)page("alerts");
  });
  // No employee sign-out: device stores the login session across app closes.
  // Admin can revoke staff access server-side if their phone is lost.
