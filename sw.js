@@ -1,5 +1,5 @@
 // PRIME HR v4 — cache ONLY public static app assets. Never store Auth/API/private data.
-const CACHE="prime-hr-shell-v12-20261027";
+const CACHE="prime-hr-shell-v13-20261027";
 const ASSETS=["./","./index.html","./app.js","./employee.html","./employee.js","./styles.css","./config.js","./manifest.webmanifest","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("prime-hr-")&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
@@ -11,6 +11,25 @@ self.addEventListener("fetch",event=>{
      const clone=res.clone();caches.open(CACHE).then(c=>c.put(req,clone));
    }return res;
  }).catch(()=>caches.match(req,{ignoreSearch:req.mode==="navigate"}).then(r=>r||(req.mode==="navigate"?caches.match("./employee.html"):Response.error()))));
+});
+
+// True background Web Push: a provider can wake this worker after the PWA is closed.
+self.addEventListener("push",event=>{
+ let data={};
+ try{data=event.data?.json()||{}}
+ catch{data={body:event.data?.text()||"You have a new HR notification."}}
+ const title=String(data.title||"PRIME HR Notification").slice(0,180);
+ const body=String(data.body||"Open PRIME HR to read your update.").slice(0,800);
+ const id=String(data.notificationId||"").slice(0,90);
+ event.waitUntil(
+  self.registration.showNotification(title,{
+   body,icon:"./icon-192.png",badge:"./icon-192.png",
+   tag:id?"prime-hr-"+id:"prime-hr-update",
+   renotify:true,
+   data:{url:"./employee.html#alerts"},
+   timestamp:Date.now()
+  })
+ );
 });
 
 // Foreground-created system alerts can be tapped to open the mobile inbox.
