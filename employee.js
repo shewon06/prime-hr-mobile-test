@@ -6,7 +6,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],fieldReports:[],notifications:[],alertChannel:null,alertChannelUser:null,alertsInitialized:false,busy:false,fieldBusy:false,screen:(location.hash==="#alerts"?"alerts":"home"),installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
+const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],fieldReports:[],notifications:[],alertChannel:null,alertChannelUser:null,alertsInitialized:false,pushSubscribed:false,busy:false,fieldBusy:false,screen:(location.hash==="#alerts"?"alerts":"home"),installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const time=s=>s?new Date(s).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Colombo"}):"—";
 const day=s=>s?String(s).slice(0,10):"—";
@@ -57,6 +57,7 @@ async function loadData(){
  state.alertsInitialized=true;
  render();view("appScreen");page(state.screen||"home");
  subscribeToAlerts();
+ restorePushSubscription();
 }
 function render(){
  const e=state.employee;if(!e)return;
@@ -138,23 +139,77 @@ function renderAlerts(){
   return;
  }
  const permission=Notification.permission;
- $("alertsPermissionButton").disabled=permission==="granted";
- $("alertsPermissionButton").textContent=permission==="granted"?"✓ Phone Alerts Enabled":"Enable Phone Alerts";
- $("alertsPermissionStatus").textContent=permission==="granted"?
-  "Phone popups can appear while PRIME HR is running. App-closed push notifications require a separate push service.":
+ $("alertsPermissionButton").disabled=permission==="granted"&&state.pushSubscribed;
+ $("alertsPermissionButton").textContent=state.pushSubscribed?"✓ Background Push Enabled":"Enable Phone Alerts";
+ $("alertsPermissionStatus").textContent=state.pushSubscribed?
+  "Background notifications are enabled on this device, even when the app is closed. Phone/OS battery and notification settings can affect delivery.":
+  permission==="granted"?"Permission granted. Tap Enable Phone Alerts to connect this device for background push.":
   permission==="denied"?"Phone alerts are blocked in your browser settings. Your in-app inbox still works.":
   "Tap Enable Phone Alerts to allow standard phone/browser alerts while the app is running.";
 }
-async function enablePhoneAlerts(){
- if(!("Notification" in window))return toast("Phone notification permission is unsupported in this browser.");
- try{
-  const permission=await Notification.requestPermission();
-  toast(permission==="granted"?"Phone alerts enabled.":"Phone alerts not enabled. You can still read the notification inbox.");
- }catch(e){toast("Unable to enable phone alerts: "+e.message)}
+function decodePushKey(b64){
+ const padded=b64.replace(/-/g,"+").replace(/_/g,"/");
+ const data=atob(padded+"=".repeat((4-padded.length%4)%4));
+ return Uint8Array.from(data,ch=>ch.charCodeAt(0));
+}
+async function storeDeviceSubscription(sub){
+ const json=sub.toJSON();
+ if(!json.keys?.p256dh||!json.keys?.auth)throw Error("Device encryption keys missing.");
+ const {error}=await state.client.from("push_subscriptions").upsert({
+  user_id:state.user.id,
+  endpoint:sub.endpoint,
+  p256dh:json.keys.p256dh,
+  auth_key:json.keys.auth
+ },{onConflict:"endpoint"});
+ if(error)throw Error("Could not register this phone: "+error.message);
+ state.pushSubscribed=true;
  renderAlerts();
+}
+async function restorePushSubscription(){
+ if(!state.user||!navigator.serviceWorker||!window.PushManager||!("Notification" in window))return;
+ if(Notification.permission!=="granted")return;
+ try{
+  const reg=await navigator.serviceWorker.ready;
+  const sub=await reg.pushManager.getSubscription();
+  if(sub)await storeDeviceSubscription(sub);
+ }catch(e){console.warn("Push restore",e)}
+}
+async function enablePhoneAlerts(){
+ if(!window.isSecureContext||!("Notification" in window)||
+    !("serviceWorker" in navigator)||!("PushManager" in window)){
+  return toast("Background push is unsupported on this phone/browser. On iPhone, use Safari Add to Home Screen (iOS 16.4+).");
+ }
+ const key=window.PRIME_HR_CONFIG?.pushPublicKey;
+ if(!key)return toast("Push server configuration is missing. Contact HR.");
+ try{
+  // Ask for notification permission directly inside the user-tap handler.
+  let permission=Notification.permission;
+  if(permission==="default")permission=await Notification.requestPermission();
+  if(permission!=="granted"){
+   toast("Phone Notifications need Allow permission. Check your phone settings.");
+   return;
+  }
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub){
+   sub=await reg.pushManager.subscribe({
+     userVisibleOnly:true,
+     applicationServerKey:decodePushKey(key)
+   });
+  }
+  await storeDeviceSubscription(sub);
+  toast("Background notifications enabled on this phone.");
+ }catch(err){
+  state.pushSubscribed=false;
+  toast("Could not enable background alerts: "+err.message);
+  renderAlerts();
+ }
 }
 async function showBrowserAlert(n){
  if(!("Notification" in window)||Notification.permission!=="granted")return;
+ // A device with a Web Push subscription receives the remote service-worker
+ // notification; don't show a duplicate foreground-local notification.
+ if(state.pushSubscribed)return;
  try{
   const opt={body:n.body,icon:"./icon-192.png",badge:"./icon-192.png",tag:"prime-hr-"+n.id,data:{target:"alerts"}};
   if("serviceWorker" in navigator){
@@ -163,7 +218,7 @@ async function showBrowserAlert(n){
   }
   const notice=new Notification(n.title,opt);
   notice.onclick=()=>{window.focus();page("alerts");notice.close()};
- }catch{/* All notifications are still available within the app inbox. */}
+ }catch{/* The authenticated in-app inbox remains available. */}
 }
 function acceptNewAlert(n){
  if(!n?.id||state.notifications.some(x=>x.id===n.id))return;
