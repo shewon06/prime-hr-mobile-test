@@ -1093,15 +1093,7 @@
     const {error,data}=await state.client.from("hr_letter_drafts").update({status:newStatus})
       .eq("id",id).eq("status",d.status).select("id");
     if(error||!data?.length)return toast(error?normalizeErr(error):"Draft status was changed elsewhere.",true);
-    if(newStatus==="issued"){
-      // Keep the legacy HR Letter Register synchronized with generated documents.
-      const {error:regErr}=await state.client.from("letter_register").insert({
-        employee_id:d.employee_id,document_no:d.document_no,letter_type:d.subject,
-        issued_on:localDate(),status:"issued",notes:"Issued from reviewed letter template, PRIME HR Next Level"
-      });
-      if(regErr)toast("Marked issued, but legacy letter register entry failed: "+normalizeErr(regErr),true);
-      else toast("Letter marked issued and recorded.");
-    }else toast("Letter approved. No signature was added.");
+    toast(newStatus==="issued"?"Letter issued and atomically recorded in HR Register.":"Letter approved. No signature was added.");
     await fetchData();
   }
   function printDraftLetter(id){
