@@ -26,8 +26,8 @@ const normalizeStaff=(s:unknown)=>{
 };
 const synthetic=(code:string)=>"staff-"+code.toLowerCase()+"@employees.primehr.example.com";
 const randomSecret=()=>{
- const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
- const arr=new Uint32Array(24);crypto.getRandomValues(arr);
+ const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+ const arr=new Uint32Array(16);crypto.getRandomValues(arr);
  return Array.from(arr,n=>alphabet[n%alphabet.length]).join("");
 };
 const uuidOk=(v:unknown)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str(v,60));
@@ -111,7 +111,7 @@ const provision=async(raw:Row,actor:string)=>{
     await admin.from("employees").insert({...row,auth_user_id:uid}).select("id").single();
   if(empErr||!emp)throw Error("Staff master save failed: "+(empErr?.message||"unknown"));
   const {error:profileErr}=await admin.from("profiles").update({
-    full_name:row.full_name,is_active:row.status==="active",must_change_password:true,role:"employee"
+    full_name:row.full_name,is_active:row.status==="active",must_change_password:false,role:"employee"
   }).eq("id",uid);
   if(profileErr)throw Error("Account approval failed: "+profileErr.message);
   await log(actor,"employee_provisioned",emp.id,{staff_code:row.staff_code});
@@ -181,7 +181,7 @@ Deno.serve(async(req:Request)=>{
     const password=randomSecret();
     const {error}=await admin.auth.admin.updateUserById(emp.auth_user_id,{password});
     if(error)throw Error(error.message);
-    const {error:profileErr}=await admin.from("profiles").update({must_change_password:true}).eq("id",emp.auth_user_id);
+    const {error:profileErr}=await admin.from("profiles").update({must_change_password:false}).eq("id",emp.auth_user_id);
     if(profileErr)throw Error(profileErr.message);
     await log(user.id,"password_reset",emp.id,{staff_code:emp.staff_code});
     return out({ok:true,staff_code:emp.staff_code,password});
