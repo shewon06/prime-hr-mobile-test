@@ -17,6 +17,20 @@ function constantTimeEquals(a:string,b:string):boolean{
  let d=0;for(let i=0;i<a.length;i++)d|=a.charCodeAt(i)^b.charCodeAt(i);
  return d===0;
 }
+// Only send to recognised HTTPS browser push gateways; subscriptions are user-supplied.
+function isTrustedPushGateway(endpoint:string):boolean{
+ try{
+  const u=new URL(endpoint),host=u.hostname.toLowerCase();
+  if(u.protocol!=="https:" || u.port || u.username || u.password)return false;
+  return host==="fcm.googleapis.com" ||
+   host==="fcmregistrations.googleapis.com" ||
+   host==="updates.push.services.mozilla.com" ||
+   host==="push.services.mozilla.com" ||
+   host==="web.push.apple.com" ||
+   host.endsWith(".push.apple.com") ||
+   host.endsWith(".notify.windows.com");
+ }catch{return false}
+}
 Deno.serve(async req=>{
  if(req.method!=="POST")return response({error:"Method not allowed"},405);
  const supplied=req.headers.get("x-prime-push-token")||"";
@@ -60,6 +74,7 @@ Deno.serve(async req=>{
   let successes=0;let lastError="";
   for(const sub of subs as Device[]){
    try{
+    if(!isTrustedPushGateway(sub.endpoint))throw Error("Unrecognised push gateway");
     const payload=JSON.stringify({
      title:note.title,body:note.body,
      notificationId:note.id,url:"./employee.html#alerts"
@@ -76,10 +91,11 @@ Deno.serve(async req=>{
    }
   }
   const attempts=task.attempts+1;
+  const exhausted=attempts>=12;
   const delayMinutes=Math.min(Math.max(2,2**Math.min(attempts,6)),60);
   await db.from("push_delivery_queue").update({
    attempts,
-   delivered_at:successes?new Date().toISOString():null,
+   delivered_at:successes||exhausted?new Date().toISOString():null,
    next_attempt_at:new Date(Date.now()+delayMinutes*60000).toISOString(),
    last_error:successes?null:lastError||"Push provider failure"
   }).eq("notification_id",task.notification_id);
