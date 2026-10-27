@@ -60,9 +60,12 @@ const buildRecord=async(row:Row,actor:string)=>{
  if(full_name.length<3||!designation)throw Error("Full Name and Designation are required");
  const branch_id=await ensureBranch(row.branch??row.branch_name??row.branch_id);
  const status=str(row.status||"active",30).toLowerCase();
+ const staff_group=str(row.staff_group||row.team||"office",25).toLowerCase();
+ if(!["office","sales","plantation"].includes(staff_group))
+   throw Error("Team must be office, sales or plantation.");
  if(!["active","on_leave","exited"].includes(status))throw Error("Invalid employee status");
  return {
-  staff_code,full_name,designation,branch_id,status,
+  staff_code,full_name,designation,branch_id,status,staff_group,
   department:maybe(row.department,120),phone:maybe(row.phone,45),
   national_id:maybe(row.national_id,45),address:maybe(row.address,500),
   date_of_birth:safeDate(row.date_of_birth),emergency_contact:maybe(row.emergency_contact,100),
@@ -86,6 +89,7 @@ const provision=async(raw:Row,actor:string)=>{
    // Also do not reactivate an exited employee when the source Excel omits status.
    const patch:Record<string,unknown>={...row};
    delete patch.hired_by;
+   if(!str(raw.staff_group||raw.team))delete patch.staff_group;
    const optional=["phone","national_id","address","date_of_birth","emergency_contact",
      "employment_type","bank_name","bank_branch","bank_account","epf_no","etf_no",
      "basic_salary","vehicle_allowance","department","joined_on","status"];
