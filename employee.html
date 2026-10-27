@@ -25,23 +25,19 @@
 <div id="passwordScreen" class="panel hidden"><h2>🔐 Change My Password</h2><p class="soft">Admin ලබාදුන් password එකෙන් login වෙන්න පුළුවන්. Password වෙනස් කිරීම අනිවාර්ය නැහැ; අවශ්‍ය නම් පසුව වෙනස් කරන්න.</p>
 <form id="passwordForm"><label>Current Password<input type="password" name="current_password" minlength="8" required autocomplete="current-password"></label><label>New Personal Password (12+ characters)<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label><label>Confirm New Password<input type="password" name="confirm_password" minlength="12" required autocomplete="new-password"></label><p class="soft">Use 12+ characters with upper and lower case letters and numbers.</p><button class="btn primary wide" type="submit">Save New Password</button></form></div>
 <div id="appScreen" class="hidden">
-<section id="pageHome" class="page"><section class="panel"><div class="row"><h2>My Workday</h2><span class="chip" id="todayDate"></span></div><div class="grid"><div class="metric"><small>Today</small><strong id="attendanceState">Not In</strong></div><div class="metric"><small>Staff Number</small><strong id="homeStaffNo">—</strong></div></div><div class="stack" style="margin-top:13px"><button class="btn primary wide" data-screen="attendance">◷ Mark Attendance</button><button class="btn outline wide hidden" id="homeFieldAction" data-screen="field">📝 Record Field Work</button><button class="btn outline wide" data-screen="leave">📅 Apply for Leave</button><button class="btn outline wide" data-screen="alerts">🔔 Notifications <span id="homeUnreadCount" class="chip hidden">0</span></button></div></section>
+<section id="pageHome" class="page"><section class="panel"><div class="row"><h2>My Workday</h2><span class="chip" id="todayDate"></span></div><div class="grid"><div class="metric"><small>Today</small><strong id="attendanceState">Not In</strong></div><div class="metric"><small>Staff Number</small><strong id="homeStaffNo">—</strong></div></div><div class="stack" style="margin-top:13px"><button class="btn primary wide" data-screen="attendance">◷ Mark Attendance</button><button class="btn outline wide" data-screen="leave">📅 Apply for Leave</button><button class="btn outline wide" data-screen="alerts">🔔 Notifications <span id="homeUnreadCount" class="chip hidden">0</span></button></div></section>
 <section class="panel"><h3>My Profile Summary</h3><div id="homeDetails" class="soft"></div><p class="soft" id="homeTeam"></p></section></section>
-<section id="pageAttendance" class="page hidden"><section class="panel"><h2>Attendance</h2><p class="soft" style="margin:8px 0 14px">Check In / Check Out records your location for authorised HR/Admin. No background tracking.</p>
-<select id="workMode" class="hidden" aria-hidden="true"><option value="office">Office</option><option value="field">Field</option></select><div class="grid" style="margin-top:14px"><button id="employeeCheckIn" class="btn primary">Check In</button><button id="employeeCheckOut" class="btn gold">Check Out</button></div><p id="attendanceAccessMessage" class="soft" role="status" style="margin-top:10px"></p><p id="attendanceMessage" class="soft">No attendance marked today.</p></section><section class="panel"><h3>Recent Attendance</h3><div id="attendanceHistory" class="soft"></div></section></section>
-<section id="pageField" class="page hidden">
- <section class="panel">
-  <h2 id="fieldTitle">Field Work Update</h2>
-  <p class="soft">Daily Check In / Check Out is separate. For this work update, your current location is saved and visible to authorised HR/Admin when you press Submit. No background tracking.</p>
-  <form id="fieldForm">
-   <label>Work Type<select id="fieldActivityType" name="activity_type" required></select></label>
-   <label id="fieldLocationLabel">Client / Site Name<input id="fieldLocationName" name="location_name" maxlength="180" minlength="2" required placeholder="Customer, location or plantation site"></label>
-   <label>Work Summary / Remarks<textarea id="fieldNotes" name="notes" rows="3" maxlength="1000" placeholder="Brief details of work completed (optional)"></textarea></label>
-   <button id="fieldSubmit" class="btn primary wide" type="submit">Save Work Update</button>
-  </form>
-  <p id="fieldAccessMessage" class="soft" role="status"></p>
- </section>
- <section class="panel"><h3>My Field Work Updates</h3><div id="fieldReportHistory"></div></section>
+<section id="pageAttendance" class="page hidden"><section class="panel">
+ <h2>Attendance</h2>
+ <p class="soft" style="margin:8px 0 14px">Check In records your regular attendance. Sales and Plantation staff can select Field Duty instead when starting off-site work. Check Out ends either type of attendance. Your current GPS location is recorded only when you tap a button, and is visible to authorised HR/Admin. No background tracking.</p>
+ <div class="grid" id="attendanceStartActions" style="margin-top:14px">
+  <button id="employeeCheckIn" class="btn primary" type="button">Check In</button>
+  <button id="employeeFieldDuty" class="btn outline hidden" type="button">Field Duty</button>
+ </div>
+ <button id="employeeCheckOut" class="btn gold wide" type="button" style="margin-top:12px">Check Out</button>
+ <p id="attendanceAccessMessage" class="soft" role="status" style="margin-top:10px"></p>
+ <p id="attendanceMessage" class="soft">No attendance marked today.</p>
+ </section><section class="panel"><h3>Recent Attendance</h3><div id="attendanceHistory" class="soft"></div></section>
 </section>
 <section id="pageLeave" class="page hidden"><section class="panel"><h2>📅 Leave Request</h2><form id="leaveForm"><label>Leave Type<select name="kind"><option>Annual</option><option>Casual</option><option>Medical</option><option>No-pay</option></select></label><div class="grid"><label>From<input name="from_date" type="date" required></label><label>To<input name="to_date" type="date" required></label></div><label>Reason<textarea name="reason" rows="3" required maxlength="600"></textarea></label><button class="btn primary" type="submit">Submit Leave Request</button></form></section><section class="panel"><h3>My Requests</h3><div id="leaveHistory"></div></section></section>
 <section id="pageAlerts" class="page hidden"><section class="panel">
@@ -52,6 +48,6 @@
  <div id="alertsList" aria-live="polite"></div>
  </section></section>
 <section id="pageNotices" class="page hidden"><section class="panel"><h2>📣 Company HR Notices</h2><div id="noticeList"></div></section></section>
-<section id="pageProfile" class="page hidden"><section class="panel"><h2>👤 My Profile</h2><div id="profileList"></div><button id="changePasswordButton" class="btn outline wide" style="margin-top:12px">Change My Password</button></section><section class="panel"><h3>Attendance Location & Privacy</h3><p class="soft">Your phone asks for location permission. Your location is saved only when you Check In or Check Out, not when you sign in, and can be viewed by authorised HR/Admin. No background tracking.</p></section></section>
-<nav class="nav"><button data-screen="home" class="active"><span>⌂</span>Home</button><button data-screen="attendance"><span>◷</span>Attend</button><button id="navField" class="hidden" data-screen="field"><span>▤</span>Work</button><button data-screen="leave"><span>▤</span>Leave</button><button data-screen="alerts"><span>🔔</span>Alerts <span id="navUnreadCount" class="chip hidden">0</span></button><button data-screen="notices"><span>♧</span>Notices</button><button data-screen="profile"><span>◉</span>Profile</button></nav>
+<section id="pageProfile" class="page hidden"><section class="panel"><h2>👤 My Profile</h2><div id="profileList"></div><button id="changePasswordButton" class="btn outline wide" style="margin-top:12px">Change My Password</button></section><section class="panel"><h3>Attendance Location & Privacy</h3><p class="soft">Your phone asks for location permission. Your location is saved only when you Check In, start Field Duty, or Check Out, not when you sign in, and can be viewed by authorised HR/Admin. No background tracking.</p></section></section>
+<nav class="nav"><button data-screen="home" class="active"><span>⌂</span>Home</button><button data-screen="attendance"><span>◷</span>Attend</button><button data-screen="leave"><span>▤</span>Leave</button><button data-screen="alerts"><span>🔔</span>Alerts <span id="navUnreadCount" class="chip hidden">0</span></button><button data-screen="notices"><span>♧</span>Notices</button><button data-screen="profile"><span>◉</span>Profile</button></nav>
 </div></div></body></html>

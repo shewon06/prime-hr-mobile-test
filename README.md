@@ -90,3 +90,7 @@ The Admin staff master has a \`staff_group\` value: \`office\`, \`sales\`, \`pla
 - Staff do not self-register. No private data is stored in the service-worker asset cache.
 - The database migration `prime_hr_employee_notifications_leave_and_notices` has been applied. The notification table was added to `supabase_realtime` publication.
 - Because rollout uses existing data, new alerts apply to actions taken after migration. Previously approved leave/notices remain accessible in their original screens.
+
+
+## Employee Attendance UI change (27 Oct 2026)
+Mobile Employee App uses a single Attendance screen with **Check In**, **Field Duty** (Sales / Plantation), and **Check Out**. Field Duty is a GPS-backed check-in with `mode=field` on the existing `hr_mark_attendance` RPC, not a separate report or page. Office Check In uses `mode=office`, and Check Out completes either attendance record. The removed separate Field Work mobile form and Work tab no longer submit `field_activity_reports`; historical reports remain in the database and HR archive. Employees can only check in once per local day; Field Duty and Check In are alternative ways to start that attendance. The GPS permission requirement and no-background-tracking disclosure stay in place. Employee notification/push features are unchanged.
