@@ -135,7 +135,7 @@ function renderAlerts(){
  }).join(""):'<p class="soft">No notifications yet. Leave decisions and HR notices will appear here.</p>';
  if(!("Notification" in window)){
   $("alertsPermissionButton").disabled=true;
-  $("alertsPermissionStatus").textContent="System phone popups are not supported in this browser. In-app alerts still work.";
+  $("alertsPermissionStatus").textContent="This browser cannot enable phone alerts. On iPhone (iOS 16.4+), open PRIME HR in Safari, use Share → Add to Home Screen, then launch the installed app and enable alerts there. In-app alerts still work.";
   return;
  }
  const permission=Notification.permission;
