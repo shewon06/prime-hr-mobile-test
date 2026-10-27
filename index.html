@@ -83,7 +83,7 @@
         <article class="panel"><div class="panel-head"><h3>Quick actions</h3></div><div class="quick-grid"><button data-go="attendance" class="quick">◷<b>Mark attendance</b><small>Record a secure check-in</small></button><button data-go="leave" class="quick">▤<b>Apply for leave</b><small>Track request status</small></button><button data-go="employees" class="quick hr-only">♙<b>Employee records</b><small>Manage staff directory</small></button></div></article>
       </section>
       <section id="view-employees" class="view hidden">
-        <div class="panel"><div class="panel-head"><h3>Employee directory</h3><button class="btn primary admin-only" id="employee-add">+ Create Employee Account</button></div><div class="toolbar"><input id="employee-search" placeholder="Search by name, staff code, or branch"><button class="btn outline" id="employee-export">Export CSV</button></div><div class="table-scroll"><table><thead><tr><th>Staff code</th><th>Employee</th><th>Designation</th><th>Team</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody id="employee-rows"></tbody></table></div></div>
+        <div class="panel"><div class="panel-head"><h3>Employee directory</h3><button class="btn primary admin-only" id="employee-add">+ Create Employee Account</button></div><div class="toolbar"><input id="employee-search" placeholder="Search by name, staff code, branch or team"><button class="btn outline" id="employee-export">Export CSV</button></div><div class="table-scroll"><table><thead><tr><th>Staff code</th><th>Employee</th><th>Designation</th><th>Team</th><th>Branch</th><th>Status</th><th></th></tr></thead><tbody id="employee-rows"></tbody></table></div></div>
       </section>
       <section id="view-staff-import" class="view hidden">
  <article class="panel"><div class="panel-head"><h3>Staff Accounts & Excel Import</h3><span class="pill approved">ADMIN ONLY</span></div><p>All employee logins are issued by Admin. Staff sign in using <b>Employee Number + Password</b>, not email. Excel import creates each staff member and their login.</p>
@@ -164,7 +164,7 @@
  </article>
 </section>
 <section id="view-recruitment" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Candidate pipeline</h3><div class="button-row"><button class="btn outline" id="candidate-export" type="button">Export CSV</button><button class="btn primary" id="candidate-add">+ Add candidate</button></div></div><div class="table-scroll"><table><thead><tr><th>Candidate</th><th>Position</th><th>Branch</th><th>Stage</th><th>Notes</th><th></th></tr></thead><tbody id="candidate-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Candidate pipeline</h3><div class="button-row"><button class="btn outline" id="candidate-export" type="button">Export CSV</button><button class="btn primary" id="candidate-add">+ Add candidate</button></div></div><div id="recruitment-summary" class="tip"></div><div class="table-scroll"><table><thead><tr><th>Candidate</th><th>Position</th><th>Branch</th><th>Stage</th><th>Notes</th><th></th></tr></thead><tbody id="candidate-rows"></tbody></table></div></article>
       </section>
       
       <section id="view-notices" class="view hidden">
@@ -177,10 +177,10 @@
         <article class="panel"><h3>App location & privacy</h3><p>Location snapshots are collected only on attendance actions. Your browser or phone can revoke the location permission at any time; without GPS check-in will not proceed. HR/Admin can view the exact check-in/out snapshots.</p><button class="btn outline" id="profile-location-settings">Review Location Permission</button></article>
       </section>
       <section id="view-kpi" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Sales KPI / Business Tracker</h3><div class="button-row"><button class="btn outline" id="kpi-export" type="button">Export CSV</button><button class="btn primary" id="kpi-add">+ Add KPI</button></div></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Target (LKR)</th><th>Achieved (LKR)</th><th>Completion</th></tr></thead><tbody id="kpi-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Sales KPI / Business Tracker</h3><div class="button-row"><button class="btn outline" id="kpi-export" type="button">Export CSV</button><button class="btn primary" id="kpi-add">+ Add KPI</button></div></div><div id="kpi-summary" class="tip"></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Target (LKR)</th><th>Achieved (LKR)</th><th>Completion</th></tr></thead><tbody id="kpi-rows"></tbody></table></div></article>
       </section>
       <section id="view-assets" class="view hidden">
-        <article class="panel"><div class="panel-head"><h3>Asset Register</h3><div class="button-row"><button class="btn outline" id="asset-export" type="button">Export CSV</button><button class="btn primary" id="asset-add">+ Add asset</button></div></div><div class="table-scroll"><table><thead><tr><th>Asset Tag</th><th>Description</th><th>Assigned to</th><th>Status</th><th>Action</th></tr></thead><tbody id="asset-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Asset Register</h3><div class="button-row"><button class="btn outline" id="asset-export" type="button">Export CSV</button><button class="btn primary" id="asset-add">+ Add asset</button></div></div><div id="asset-summary" class="tip"></div><div class="table-scroll"><table><thead><tr><th>Asset Tag</th><th>Description</th><th>Assigned to</th><th>Status</th><th>Action</th></tr></thead><tbody id="asset-rows"></tbody></table></div></article>
       </section>
       <section id="view-letters" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
