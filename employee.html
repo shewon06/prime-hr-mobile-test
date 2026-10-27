@@ -46,9 +46,9 @@
 <section id="pageLeave" class="page hidden"><section class="panel"><h2>📅 Leave Request</h2><form id="leaveForm"><label>Leave Type<select name="kind"><option>Annual</option><option>Casual</option><option>Medical</option><option>No-pay</option></select></label><div class="grid"><label>From<input name="from_date" type="date" required></label><label>To<input name="to_date" type="date" required></label></div><label>Reason<textarea name="reason" rows="3" required maxlength="600"></textarea></label><button class="btn primary" type="submit">Submit Leave Request</button></form></section><section class="panel"><h3>My Requests</h3><div id="leaveHistory"></div></section></section>
 <section id="pageAlerts" class="page hidden"><section class="panel">
  <div class="row"><h2>🔔 Notifications</h2><span class="chip" id="alertsUnreadCount">0 new</span></div>
- <p class="soft">Leave decisions and new HR Notices appear here automatically while the app is open. Unread notifications remain available when you reopen the app.</p>
+ <p class="soft">Leave decisions and HR Notices appear here automatically. Once enabled, background phone alerts can arrive after you close the app.</p>
  <button id="alertsPermissionButton" class="btn outline wide" type="button">Enable Phone Alerts</button>
- <p id="alertsPermissionStatus" class="soft">To allow phone popups while the app is running, tap Enable Phone Alerts. Full push notifications when the app is closed require a separate push service.</p>
+ <p id="alertsPermissionStatus" class="soft">To allow phone popups while the app is running, tap Enable Phone Alerts. Background push alerts arrive even when the app is closed after you enable them on this device.</p>
  <div id="alertsList" aria-live="polite"></div>
  </section></section>
 <section id="pageNotices" class="page hidden"><section class="panel"><h2>📣 Company HR Notices</h2><div id="noticeList"></div></section></section>
