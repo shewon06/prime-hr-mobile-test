@@ -4,5 +4,6 @@
  */
 window.PRIME_HR_CONFIG = Object.freeze({
  supabaseUrl: "https://qkhcojaouueypkgrzlov.supabase.co",
- supabasePublishableKey: "sb_publishable_cT49_Bq0hlD4DL65-G3xKg_JQhHx_3H"
+ supabasePublishableKey: "sb_publishable_cT49_Bq0hlD4DL65-G3xKg_JQhHx_3H",
+ pushPublicKey: "BAiGkZB0nh9Agtw-25jWLIbaviL7DascK5vxXMlJBkhuwPIqDnyzgUeKnsmLV1I6lpxZtofzjs31IePiVB0O5ek"
 });
