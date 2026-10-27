@@ -106,7 +106,8 @@
             <select id="attendance-mode"><option value="office">Office</option><option value="field">Field / Customer Visit</option></select>
             </label>
             <div class="gps-help"><b>📍 GPS Attendance Enabled</b><p>The app requests your current location only when you enable location and when you press Check In / Check Out. A GPS snapshot, accuracy and server time will be visible to authorised HR/Admin users. No background tracking.</p><button id="location-settings" type="button" class="btn outline">Location permission settings</button><span id="gps-status" class="muted">Location not yet enabled</span></div></article><article class="panel"><div class="panel-head"><h3>Today's summary</h3></div><div id="attendance-summary" class="tip">Loading…</div></article></div>
-        <article class="panel"><div class="panel-head"><h3>Attendance records</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Work date</th><th>Check-in</th><th>Check-out</th><th>Mode</th></tr></thead><tbody id="attendance-rows"></tbody></table></div></article>
+        <article class="panel"><div class="panel-head"><h3>Attendance records</h3><button id="attendance-export" class="btn outline hr-only" type="button">Export CSV</button></div>
+ <div class="toolbar hr-only"><label>Work Date<input type="date" id="attendance-date-filter"></label><label>Team<select id="attendance-team-filter"><option value="">All Teams</option><option value="office">Office Staff</option><option value="sales">Sales</option><option value="plantation">Plantation</option></select></label></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Work date</th><th>Check-in</th><th>Check-out</th><th>Mode</th></tr></thead><tbody id="attendance-rows"></tbody></table></div></article>
       </section>
       
       <section id="view-locations" class="view hidden">
@@ -214,9 +215,9 @@
       </section>
       <section id="view-roadmap" class="view hidden">
         <div class="roadmap-grid">
-          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Payroll &amp; Sri Lanka compliance</h3><p>EPF, ETF, APIT, overtime, bank formats, pay slip approval and audit trail. Do not use a prototype for salary disbursements.</p></article>
-          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Letters &amp; documents</h3><p>Company-approved appointment templates, bulk issuance, signing, personnel documents and document acknowledgements.</p></article>
-          <article class="panel"><span class="pill">NEXT PHASE</span><h3>Sales performance &amp; KPI</h3><p>Region / zone structures, monthly business targets, monthly performance and regional leaderboards.</p></article>
+          <article class="panel"><span class="pill">PARTIALLY IMPLEMENTED</span><h3>Payroll &amp; Sri Lanka compliance</h3><p>Manual payroll drafts, pay statements and Admin approval now available. Statutory EPF/ETF/APIT calculations, attendance overtime policies, bank formats and verified disbursement remain pending. Do not use this prototype alone for salary disbursements.</p></article>
+          <article class="panel"><span class="pill">PARTIALLY IMPLEMENTED</span><h3>Letters &amp; documents</h3><p>Template editor, approved wording control, bulk unsigned drafts, previews, approvals and issuance register are available. Your exact company-approved clauses, real signatures, letterhead and acknowledgements must be supplied and verified separately.</p></article>
+          <article class="panel"><span class="pill">PARTIALLY IMPLEMENTED</span><h3>Sales performance &amp; KPI</h3><p>Employee monthly targets and achievements, percentage tracking and CSV exports are available. Region/zone rollups and leaderboard policy remain to be configured.</p></article>
           <article class="panel"><span class="pill">NEXT PHASE</span><h3>Further security & approval</h3><p>MFA enforcement, admin audit reports, retention automation, location accuracy monitoring, HR mobile training and independent security review before collecting live staff data.</p></article>
         </div>
       </section>
