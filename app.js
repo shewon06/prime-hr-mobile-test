@@ -442,7 +442,19 @@
   }
   function renderAssets(){
     if(!isHR())return;
-    $("asset-rows").innerHTML=state.assets.map(a=>'<tr><td>'+esc(a.asset_tag)+'</td><td>'+esc(a.description)+'</td><td>'+esc(a.assigned_to?employeeName(a.assigned_to):"Unassigned")+'</td><td>'+fmtStatus(a.status)+'</td></tr>').join("")||empty(4,"No assets in register");
+    $("asset-rows").innerHTML=state.assets.map(a=>'<tr><td>'+esc(a.asset_tag)+'</td><td>'+esc(a.description)+'</td><td>'+esc(a.assigned_to?employeeName(a.assigned_to):"Unassigned")+'</td><td>'+fmtStatus(a.status)+'</td><td><button class="btn tiny outline" data-asset-edit="'+esc(a.id)+'">Edit / Reassign</button></td></tr>').join("")||empty(5,"No assets in register");
+  }
+  function editAsset(id){
+    if(!isHR())return;
+    const a=state.assets.find(x=>x.id===id);if(!a)return;
+    showQuick("asset");state.editAssetId=id;
+    const f=$("quick-form");
+    setFormValue(f,"asset_tag",a.asset_tag);
+    setFormValue(f,"description",a.description);
+    setFormValue(f,"assigned_to",a.assigned_to||"none");
+    setFormValue(f,"status",a.status);
+    setFormValue(f,"notes",a.notes||"");
+    $("quick-title").textContent="Edit / Reassign Asset";
   }
   function renderLetters(){
     if(!isHR())return;
@@ -456,10 +468,11 @@
     const fieldSets={
       notice:['Publish HR Notice',input("Title","title")+'<label>Notice content<textarea name="content" rows="6" required maxlength="8000"></textarea></label>'],
       kpi:['Sales KPI Record',select("Employee","employee_id",employeeOpts)+input("Period (1st of month)","period_month","date")+input("Target amount (LKR)","target_amount","number")+input("Achieved amount (LKR)","achieved_amount","number")],
-      asset:['Asset Record',input("Asset tag","asset_tag")+input("Description","description")+select("Assigned employee","assigned_to",'<option value="none">Unassigned</option>'+state.employees.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.full_name)+'</option>').join(""))+select("Status","status",["available","assigned","repair","returned"].map(x=>'<option>'+x+'</option>').join(""))],
+      asset:['Asset Record',input("Asset tag","asset_tag")+input("Description","description")+select("Assigned employee","assigned_to",'<option value="none">Unassigned</option>'+state.employees.map(e=>'<option value="'+esc(e.id)+'">'+esc(e.full_name)+'</option>').join(""))+select("Status","status",["available","assigned","repair","returned"].map(x=>'<option>'+x+'</option>').join(""))+'<label>Notes<textarea name="notes" rows="3" maxlength="1000"></textarea></label>'],
       letter:['HR Letter Register',select("Employee","employee_id",employeeOpts)+input("Document number","document_no")+input("Letter type","letter_type")+input("Issue date (optional)","issued_on","date",false)+select("Status","status",["draft","approved","issued","void"].map(x=>'<option>'+x+'</option>').join(""))]
     };
     state.quickType=type;
+    state.editAssetId=null;
     $("quick-title").textContent=fieldSets[type][0];
     $("quick-fields").innerHTML=fieldSets[type][1];
     $("quick-form").reset();
@@ -475,12 +488,20 @@
       table="kpis";const d=String(f.get("period_month"));record={employee_id:String(f.get("employee_id")),period_month:d.slice(0,7)+"-01",target_amount:Number(f.get("target_amount")),achieved_amount:Number(f.get("achieved_amount"))};
       if(record.target_amount<0||record.achieved_amount<0)return toast("Amounts cannot be negative.",true);
     }else if(type==="asset"){
-      table="assets";record={asset_tag:String(f.get("asset_tag")).trim(),description:String(f.get("description")).trim(),assigned_to:f.get("assigned_to")==="none"?null:f.get("assigned_to"),status:String(f.get("status"))};
+      table="assets";record={asset_tag:String(f.get("asset_tag")).trim(),description:String(f.get("description")).trim(),assigned_to:f.get("assigned_to")==="none"?null:f.get("assigned_to"),status:String(f.get("status")),notes:String(f.get("notes")||"").trim()||null};
+      if(record.status==="assigned"&&!record.assigned_to)return toast("Choose a staff member for an Assigned asset.",true);
+      if(record.status==="available"&&record.assigned_to)return toast("Unassign the employee when an asset is Available.",true);
     }else if(type==="letter"){
       table="letter_register";record={employee_id:String(f.get("employee_id")),document_no:String(f.get("document_no")).trim(),letter_type:String(f.get("letter_type")).trim(),issued_on:String(f.get("issued_on"))||null,status:String(f.get("status"))};
     }else return;
-    const {error}=await state.client.from(table).insert(record);
+    const request=type==="kpi"
+      ?state.client.from(table).upsert(record,{onConflict:"employee_id,period_month"})
+      :type==="asset"&&state.editAssetId
+        ?state.client.from(table).update(record).eq("id",state.editAssetId)
+        :state.client.from(table).insert(record);
+    const {error}=await request;
     if(error)return toast(normalizeErr(error),true);
+    state.editAssetId=null;
     $("quick-dialog").close();toast("Record saved securely.");await fetchData();
   }
 
@@ -1177,6 +1198,7 @@
       b=e.target.closest("[data-payroll-print]");if(b)return printPayroll(b.dataset.payrollPrint);
       b=e.target.closest("[data-draft-action]");if(b)return decideLetterDraft(b.dataset.draftId,b.dataset.draftAction);
       b=e.target.closest("[data-draft-print]");if(b)return printDraftLetter(b.dataset.draftPrint);
+      b=e.target.closest("[data-asset-edit]");if(b)return editAsset(b.dataset.assetEdit);
     });
     $("workspace").addEventListener("change",e=>{const s=e.target.closest("[data-role-id]");if(s)updateRole(s.dataset.roleId,s.value)});
   }
