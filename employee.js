@@ -91,7 +91,7 @@ function requestNativeLocationOnce(){
  if(localStorage.getItem(key)==="yes")return;
  localStorage.setItem(key,"yes");
  navigator.geolocation.getCurrentPosition(
-   pos=>{$("gpsStatus").textContent="Location permission available. Accuracy ±"+Math.round(pos.coords.accuracy)+" m.";},
+   ()=>{},
    ()=>{/* Browser permission denial is handled in phone settings or at attendance. */},
    {enableHighAccuracy:true,maximumAge:0,timeout:20000}
  );
@@ -108,25 +108,19 @@ function gps(){
   {enableHighAccuracy:true,maximumAge:0,timeout:20000});
  });
 }
-async function enableLocation(){
- $("allowLocation").disabled=true;$("gpsStatus").textContent="Requesting permission from your phone…";
- try{const p=await gps();$("gpsStatus").textContent="✓ Location available · Accuracy ±"+Math.round(p.accuracy)+"m. A fresh location is collected on every attendance action.";toast("Location is ready for attendance.")}
- catch(e){$("gpsStatus").textContent=e.message;toast(e.message)}
- finally{$("allowLocation").disabled=false}
-}
 async function markAttendance(action){
  if(state.busy||!state.employee)return;
- state.busy=true;render();$("gpsStatus").textContent="Getting current location for attendance…";
+ state.busy=true;render();
  try{
   const p=await gps();
   const {error}=await state.client.rpc("hr_mark_attendance",{
    p_action:action,p_lat:p.latitude,p_lng:p.longitude,p_accuracy:p.accuracy,p_mode:$("workMode").value
   });
   if(error)throw Error(error.message);
-  $("gpsStatus").textContent="✓ "+(action==="check_in"?"Check In":"Check Out")+" saved with location accuracy ±"+Math.round(p.accuracy)+"m";
+
   toast("Attendance saved successfully.");
   await loadData();
- }catch(e){$("gpsStatus").textContent=e.message;toast(e.message)}
+ }catch(e){toast(e.message)}
  finally{state.busy=false;render()}
 }
 async function login(ev){
@@ -198,7 +192,7 @@ async function init(){
  $("employeeLogin").addEventListener("submit",login);
  $("passwordForm").addEventListener("submit",passwordChange);
  $("leaveForm").addEventListener("submit",leave);
- $("allowLocation").addEventListener("click",enableLocation);
+
  $("employeeCheckIn").addEventListener("click",()=>markAttendance("check_in"));
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));
  // No employee sign-out: device stores the login session across app closes.
