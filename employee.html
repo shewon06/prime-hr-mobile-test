@@ -35,6 +35,11 @@
 <form id="passwordForm"><label>Current Password<input type="password" name="current_password" minlength="8" required autocomplete="current-password"></label><label>New Personal Password (12+ characters)<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label><label>Confirm New Password<input type="password" name="confirm_password" minlength="12" required autocomplete="new-password"></label><p class="soft">Use 12+ characters with upper and lower case letters and numbers.</p><button class="btn primary wide" type="submit">Save New Password</button></form></div>
 <div id="appScreen" class="hidden">
 <section id="pageHome" class="page"><section class="panel"><div class="row"><h2>My Workday</h2><span class="chip" id="todayDate"></span></div><div class="grid"><div class="metric"><small>Today</small><strong id="attendanceState">Not In</strong></div><div class="metric"><small>Staff Number</small><strong id="homeStaffNo">—</strong></div></div><div class="stack" style="margin-top:13px"><button class="btn primary wide" data-screen="attendance">◷ Mark Attendance</button><button class="btn outline wide" data-screen="leave">📅 Apply for Leave</button><button class="btn outline wide" data-screen="alerts">🔔 Notifications <span id="homeUnreadCount" class="chip hidden">0</span></button></div></section>
+<section class="panel" id="homePushSetup">
+  <h3>🔔 Enable Phone Notifications</h3>
+  <p class="soft">For HR Notices and attendance reminders on your phone, please enable alerts. Notices are also available inside the app.</p>
+  <button class="btn outline wide" type="button" id="homeEnableAlerts">Enable Phone Alerts</button>
+ </section>
 <section class="panel"><h3>My Profile Summary</h3><div id="homeDetails" class="soft"></div><p class="soft" id="homeTeam"></p></section></section>
 <section id="pageAttendance" class="page hidden"><section class="panel">
  <h2>Attendance</h2>
