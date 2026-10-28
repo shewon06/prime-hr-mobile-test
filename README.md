@@ -94,3 +94,13 @@ The Admin staff master has a \`staff_group\` value: \`office\`, \`sales\`, \`pla
 
 ## Employee Attendance UI change (27 Oct 2026)
 Mobile Employee App uses a single Attendance screen with **Check In**, **Field Duty** (Sales / Plantation), and **Check Out**. Field Duty is a GPS-backed check-in with `mode=field` on the existing `hr_mark_attendance` RPC, not a separate report or page. Office Check In uses `mode=office`, and Check Out completes either attendance record. The removed separate Field Work mobile form and Work tab no longer submit `field_activity_reports`; historical reports remain in the database and HR archive. Employees can only check in once per local day; Field Duty and Check In are alternative ways to start that attendance. The GPS permission requirement and no-background-tracking disclosure stay in place. Employee notification/push features are unchanged.
+
+
+## Remote employee logout after admin session revocation (28 October 2026)
+
+- No employee-facing Logout button is added.
+- The Admin can revoke a specific user's server sessions without changing/deleting the employee account.
+- Public authenticated-only RPC \`prime_is_current_employee_session_active()\` tests whether the calling JWT's own \`session_id\` is still registered in \`auth.sessions\`. It exposes no other employee or session information.
+- The Employee Mobile App checks this RPC on app startup, login, every 15 seconds while in the foreground, and when resumed. A revoked session is locally cleared and the login screen is displayed. A temporary network outage does not sign out valid users.
+- An already-open older version of the app **cannot be remotely forced to clear its rendered screen** without loading the updated app JavaScript: reload or completely close/reopen it while online. JWTs may remain valid until their normal expiry, even after server revocation.
+- Migration applied: \`prime_hr_verify_server_session_for_remote_employee_logout\`.
