@@ -328,9 +328,11 @@ async function endRevokedEmployeeSession(){
  // Revoked server sessions sometimes make the Auth sign-out API reject the request.
  // Clear only this project's cached login key, not other site/app data.
  try{
-  const url=new URL(window.PRIME_HR_CONFIG.supabaseUrl);
-  const storageKey="sb-"+url.hostname.split(".")[0]+"-auth-token";
-  window.localStorage.removeItem(storageKey);
+  const projectHost=String(window.PRIME_HR_CONFIG?.supabaseUrl||"").split("/")[2]||"";
+  if(projectHost){
+   const storageKey="sb-"+projectHost.split(".")[0]+"-auth-token";
+   window.localStorage.removeItem(storageKey);
+  }
  }catch(e){console.warn("Local login cache",e)}
  state.endingInvalidSession=false;
  toast("Your previous login session has ended. Please sign in again.");
