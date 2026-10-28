@@ -6,7 +6,7 @@
 "use strict";
 const $=id=>document.getElementById(id);
 const safe=s=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],notifications:[],alertChannel:null,alertChannelUser:null,alertsInitialized:false,pushSubscribed:false,busy:false,screen:(location.hash==="#alerts"?"alerts":"home"),installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
+const state={client:null,user:null,profile:null,employee:null,attendance:[],leaves:[],notices:[],reads:[],notifications:[],alertChannel:null,alertChannelUser:null,alertsInitialized:false,pushSubscribed:false,busy:false,sessionValidationPending:false,endingInvalidSession:false,screen:(location.hash==="#alerts"?"alerts":"home"),installPrompt:null,locationPermission:"unknown",locationPermissionStatus:null};
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const time=s=>s?new Date(s).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:"Asia/Colombo"}):"—";
 const day=s=>s?String(s).slice(0,10):"—";
@@ -296,11 +296,79 @@ async function markAlertRead(id){
 }
 
 // Restore the saved Supabase session; opening and closing the app never calls signOut.
+
+/* Server-side session revocation can leave a stale login visible on an already-open PWA.
+   This client-side guard clears only the expired/revoked local session.
+   No staff-facing Logout button is added. */
+async function endRevokedEmployeeSession(){
+ if(state.endingInvalidSession)return;
+ state.endingInvalidSession=true;
+ if(state.alertChannel&&state.client){
+  try{state.client.removeChannel(state.alertChannel)}catch(_){}
+ }
+ state.alertChannel=null;
+ state.alertChannelUser=null;
+ state.user=null;
+ state.profile=null;
+ state.employee=null;
+ state.attendance=[];state.leaves=[];state.notices=[];state.reads=[];
+ state.notifications=[];
+ state.alertsInitialized=false;
+ state.pushSubscribed=false;
+ state.screen="home";
+ const popup=$("hrNoticePopup");
+ if(popup?.open&&typeof popup.close==="function")popup.close();
+ view("loginScreen");
+ try{
+  // Local scope: do not affect other devices or employee accounts.
+  await state.client.auth.signOut({scope:"local"});
+ }catch(e){
+  console.warn("Local session sign out",e);
+ }
+ // Revoked server sessions sometimes make the Auth sign-out API reject the request.
+ // Clear only this project's cached login key, not other site/app data.
+ try{
+  const url=new URL(window.PRIME_HR_CONFIG.supabaseUrl);
+  const storageKey="sb-"+url.hostname.split(".")[0]+"-auth-token";
+  window.localStorage.removeItem(storageKey);
+ }catch(e){console.warn("Local login cache",e)}
+ state.endingInvalidSession=false;
+ toast("Your previous login session has ended. Please sign in again.");
+}
+async function verifyEmployeeServerSession(){
+ if(!state.client||!state.user||state.endingInvalidSession)return false;
+ if(state.sessionValidationPending)return true;
+ state.sessionValidationPending=true;
+ try{
+  const {data,error}=await state.client.rpc("prime_is_current_employee_session_active");
+  if(error){
+   // A temporary network interruption must not log out all legitimate staff.
+   if(/expired.*jwt|invalid.*jwt|refresh token.*(not found|invalid)|session.*(not found|expired)|not authenticated/i.test(String(error.message||""))){
+    await endRevokedEmployeeSession();
+    return false;
+   }
+   console.warn("Employee session check delayed",error.message);
+   return !!state.user;
+  }
+  if(data===false){
+   await endRevokedEmployeeSession();
+   return false;
+  }
+  return !!state.user;
+ }catch(err){
+  console.warn("Employee session verification unavailable",err);
+  return !!state.user;
+ }finally{
+  state.sessionValidationPending=false;
+ }
+}
+
 async function checkSession(){
  const {data:{session},error}=await state.client.auth.getSession();
  if(error)throw error;
  if(!session){view("loginScreen");return}
  state.user=session.user;
+ if(!await verifyEmployeeServerSession())return;
  await loadData();
  if(state.profile?.is_active && state.employee?.status==="active"){
    await observeLocationPermission();
@@ -389,7 +457,9 @@ async function login(ev){
   const {data,error}=await state.client.auth.signInWithPassword({email,password});
   if(error)throw Error("Employee Number or password is incorrect.");
   if(!data.user)throw Error("Login failed.");
-  state.user=data.user;await loadData();
+  state.user=data.user;
+  if(!await verifyEmployeeServerSession())return;
+  await loadData();
   if(state.profile?.is_active && state.employee?.status==="active"){
     await observeLocationPermission();
     requestNativeLocationOnce();
@@ -475,17 +545,23 @@ async function init(){
  $("employeeCheckOut").addEventListener("click",()=>markAttendance("check_out"));
  document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="visible"&&state.user&&state.employee){
-    observeLocationPermission();
-    refreshAlerts();
+    void verifyEmployeeServerSession().then(valid=>{
+     if(valid&&state.employee){observeLocationPermission();refreshAlerts()}
+    });
    }
  });
+ // Validate revoked sessions even if the mobile app stays open for hours.
+ window.setInterval(()=>{
+  if(!document.hidden&&state.user&&state.employee){
+   void verifyEmployeeServerSession();
+  }
+ },15000);
  // Fallback check for browsers where Realtime is suspended.
  window.setInterval(()=>{if(!document.hidden&&state.user&&state.employee)refreshAlerts()},60000);
  if("serviceWorker" in navigator)navigator.serviceWorker.addEventListener("message",event=>{
   if(event.data?.type==="PRIME_HR_OPEN_ALERTS"&&state.employee)page("alerts");
  });
- // No employee sign-out: device stores the login session across app closes.
- // Admin can revoke staff access server-side if their phone is lost.
+ // No employee-facing sign-out button: sessions persist until revoked, expired, or explicitly cleared by HR.
  $("changePasswordButton").addEventListener("click",()=>view("passwordScreen"));
  document.querySelectorAll("[data-screen]").forEach(b=>b.addEventListener("click",()=>page(b.dataset.screen)));
  $("noticeList").addEventListener("click",e=>{const b=e.target.closest("[data-notice]");if(b)ack(b.dataset.notice)});
