@@ -9,7 +9,7 @@ Configured on 28 October 2026 in Supabase project `qkhcojaouueypkgrzlov`.
 | Every day 08:30 | `0 3 * * *` | `prime-hr-daily-0830-check-in` | `attendance_check_in_reminder` |
 | Every day 17:00 | `30 11 * * *` | `prime-hr-daily-1700-check-out` | `attendance_check_out_reminder` |
 
-These timings are valid because the project's `cron.timezone` is `GMT` and Sri Lanka stays UTC+05:30. All seven days are currently enabled. To limit to weekdays use day-of-week 1-5 in each job; to include Saturday use 1-6.
+These timings are valid because the project's `cron.timezone` is `GMT` and Sri Lanka stays UTC+05:30. Both cron jobs run daily; the database function excludes **Office Staff** on Saturday and Sunday (Sri Lanka local date), while **Sales and Plantation** staff remain eligible all seven days. Do not change the cron schedules to weekdays only, because that would also remove weekend reminders for Sales and Plantation.
 
 ## Recipient logic
 
@@ -18,6 +18,7 @@ The server sends reminders only to linked, active employee accounts with active 
 - 08:30: skip employees who already marked regular Check In or Field Duty for the Sri Lanka work date.
 - 17:00: only employees with an open attendance record for the Sri Lanka work date (Check In / Field Duty but no Check Out).
 - Both: skip employees whose approved leave covers the local date.
+- Both: Office Staff receive reminders Monday–Friday only; Sales and Plantation remain eligible on Saturdays and Sundays. The actual recipient decision uses the employee master `staff_group`.
 - Database function `private.send_prime_attendance_reminders(p_phase text)` uses a deterministic day/phase UUID for `source_id`, combined with notification kind and recipient to avoid duplicates on retries.
 
 ## Delivery and navigation
