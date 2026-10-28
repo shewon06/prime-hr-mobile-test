@@ -108,7 +108,7 @@ function renderAlerts(){
     '<div class="row"><h3>'+safe(n.title)+'</h3><span class="chip">'+(n.read_at?"Read":"New")+'</span></div>'+
     '<small>'+safe(when)+'</small><p>'+safe(n.body)+'</p>'+
     '<button class="btn outline" type="button" data-alert-open="'+safe(n.id)+'">'+
-       (n.kind==="hr_notice"?"Open Notice":"View Leave Request")+'</button></article>';
+       (n.kind==="hr_notice"?"Open Notice":n.kind.startsWith("attendance_")?"Open Attendance":"View Leave Request")+'</button></article>';
  }).join(""):'<p class="soft">No notifications yet. Leave decisions and HR notices will appear here.</p>';
  if(!("Notification" in window)){
   $("alertsPermissionButton").disabled=true;
@@ -236,7 +236,7 @@ function acceptNewAlert(n){
   state.client.from("hr_notices").select("id,title,content,published,created_at")
    .eq("published",true).order("created_at",{ascending:false}).limit(100)
    .then(({data,error})=>{if(!error){state.notices=data||[];render()}});
- }else{
+ }else if(n.kind.startsWith("leave_")){
   state.client.from("leave_requests").select("id,kind,from_date,to_date,reason,status")
    .eq("employee_id",state.employee.id).order("created_at",{ascending:false}).limit(100)
    .then(({data,error})=>{if(!error){state.leaves=data||[];render()}});
@@ -292,7 +292,7 @@ async function markAlertRead(id){
   n.read_at=when;
   renderAlerts();
  }
- page(n.kind==="hr_notice"?"notices":"leave");
+ page(n.kind==="hr_notice"?"notices":n.kind.startsWith("attendance_")?"attendance":"leave");
 }
 
 // Restore the saved Supabase session; opening and closing the app never calls signOut.
