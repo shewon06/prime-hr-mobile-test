@@ -52,6 +52,7 @@ async function loadData(){
  state.notifications=res[res.length-1]?.data||[];
  state.alertsInitialized=true;
  render();view("appScreen");page(state.screen||"home");
+ showUnreadHRNoticesOnStartup();
  subscribeToAlerts();
  restorePushSubscription();
 }
@@ -98,6 +99,7 @@ function renderAlerts(){
  $("homeUnreadCount").textContent=String(unread);
  $("navUnreadCount").textContent=String(unread);
  $("homeUnreadCount").classList.toggle("hidden",unread===0);
+ $("homePushSetup").classList.toggle("hidden",state.pushSubscribed);
  $("navUnreadCount").classList.toggle("hidden",unread===0);
  if("setAppBadge" in navigator){
   (unread?navigator.setAppBadge(unread):navigator.clearAppBadge?.())?.catch?.(()=>{});
@@ -201,6 +203,31 @@ async function showBrowserAlert(n){
 // Do not replay old notifications on login or when reopening the app.
 const hrPopupQueue=[];
 const hrPopupSeen=new Set();
+// Only dismiss each notice popup once per phone/account. The notice remains in the HR inbox
+// until acknowledged, and an unread notice can reappear after a reload if not dismissed.
+function seenHRNoticeKey(){
+ return "prime_hr_notice_popup_seen_"+(state.user?.id||"unknown");
+}
+function hasSeenHRNotice(id){
+ try{const saved=JSON.parse(localStorage.getItem(seenHRNoticeKey())||"[]");return Array.isArray(saved)&&saved.includes(id)}catch{return false}
+}
+function rememberHRNoticeSeen(id){
+ if(!id||!state.user)return;
+ try{
+  const key=seenHRNoticeKey();
+  const saved=JSON.parse(localStorage.getItem(key)||"[]");
+  const ids=Array.isArray(saved)?saved.filter(s=>typeof s==="string"):[];
+  if(!ids.includes(id))ids.push(id);
+  localStorage.setItem(key,JSON.stringify(ids.slice(-150)));
+ }catch{/* Local storage can be unavailable; the inbox still retains the notice. */}
+}
+function showUnreadHRNoticesOnStartup(){
+ if(!state.user||!state.employee)return;
+ const after=Date.now()-14*24*60*60*1000;
+ state.notifications.filter(n=>n.kind==="hr_notice"&&!n.read_at
+  &&new Date(n.created_at).getTime()>=after&&!hasSeenHRNotice(n.id))
+  .slice(0,3).forEach(queueHRNoticePopup);
+}
 function showNextHRNoticePopup(){
  const dialog=$("hrNoticePopup");
  if(!dialog||dialog.open||document.visibilityState!=="visible"||!state.employee)return;
@@ -214,15 +241,16 @@ function showNextHRNoticePopup(){
 }
 function queueHRNoticePopup(n){
  if(n?.kind!=="hr_notice"||!n.id||document.visibilityState!=="visible"||!state.employee)return;
- if(hrPopupSeen.has(n.id))return;
+ if(hrPopupSeen.has(n.id)||hasSeenHRNotice(n.id))return;
  hrPopupSeen.add(n.id);
  hrPopupQueue.push({id:n.id,title:n.title,body:n.body});
  showNextHRNoticePopup();
 }
 function closeHRNoticePopup(){
  const d=$("hrNoticePopup");
+ rememberHRNoticeSeen(d.dataset.notificationId);
  if(d.open&&typeof d.close==="function")d.close();
- else d.removeAttribute("open");
+ else{d.removeAttribute("open");showNextHRNoticePopup()}
 }
 function acceptNewAlert(n){
  if(!n?.id||state.notifications.some(x=>x.id===n.id))return;
@@ -526,6 +554,7 @@ async function init(){
  $("passwordForm").addEventListener("submit",passwordChange);
  $("leaveForm").addEventListener("submit",leave);
  $("alertsPermissionButton").addEventListener("click",enablePhoneAlerts);
+ $("homeEnableAlerts").addEventListener("click",enablePhoneAlerts);
  $("hrPopupLater").addEventListener("click",closeHRNoticePopup);
  $("hrPopupOpen").addEventListener("click",()=>{
   const id=$("hrNoticePopup").dataset.notificationId;
@@ -534,6 +563,7 @@ async function init(){
   else page("notices");
  });
  $("hrNoticePopup").addEventListener("close",()=>{
+  rememberHRNoticeSeen($("hrNoticePopup").dataset.notificationId);
   // Keep a series of incoming Notices sequential instead of losing them.
   if(hrPopupQueue.length)showNextHRNoticePopup();
  });
