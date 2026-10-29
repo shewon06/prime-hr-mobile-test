@@ -63,6 +63,7 @@
       <button data-view="kpi" class="nav-item hr-only"><span>▥</span> Sales KPI</button>
       <button data-view="assets" class="nav-item hr-only"><span>▱</span> Assets</button>
       <button data-view="letters" class="nav-item hr-only"><span>▤</span> Letter Register</button>
+      <button data-view="appointment-generator" class="nav-item hr-only"><span>✎</span> Appointment Generator</button>
       <button data-view="accounts" class="nav-item admin-only"><span>⚙</span> Admin Access</button>
       <div class="nav-divider"></div>
       <button data-view="roadmap" class="nav-item"><span>✦</span> Future modules</button>
@@ -185,6 +186,7 @@
       </section>
       <section id="view-letters" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
+        <button class="btn outline" type="button" data-go="appointment-generator">Open Original Word Appointment Generator</button>
         <p class="fineprint">Admin must upload/enter company-approved exact position-specific wording first. This workflow only creates unsigned drafts, requires Admin approval, and records issuance. It does not generate legal clauses automatically.</p>
  <div class="split">
  <div><h4>Company Appointment / HR Letter Template (Admin Only)</h4>
@@ -210,6 +212,23 @@
  <h4>Templates</h4><div class="table-scroll"><table><thead><tr><th>Template</th><th>Designation</th><th>Language</th><th>Version</th><th>Approved</th></tr></thead><tbody id="letter-template-rows"></tbody></table></div>
  <h4>Generated Draft Register</h4><div class="table-scroll"><table><thead><tr><th>Doc No.</th><th>Employee</th><th>Subject</th><th>Status</th><th>Action</th></tr></thead><tbody id="letter-draft-rows"></tbody></table></div>
         <div class="table-scroll"><table><thead><tr><th>Document No.</th><th>Employee</th><th>Type</th><th>Date</th><th>Status</th></tr></thead><tbody id="letter-rows"></tbody></table></div></article>
+      </section>
+
+      <section id="view-appointment-generator" class="view hidden">
+        <article class="panel">
+          <div class="panel-head"><h3>Original PRIME Appointment Letter Generator</h3><button class="btn outline" type="button" id="appointment-reload">Reload Generator</button></div>
+          <p class="fineprint">Generate original Word Appointment Letters with position-specific Annexures. The original Word templates, clauses, letterhead and formatting are not modified.</p>
+          <div class="appointment-import admin-only" id="appointment-import">
+            <h4>Admin Setup — Import Original Appointment System</h4>
+            <p class="fineprint">One-time setup: upload the original PRIME Appointment Letter System HTML file (with 6 Word templates). The document is saved in private HR cloud storage, not in public GitHub source. After import, HR/Admin can open it on authenticated computers.</p>
+            <div class="appointment-tools"><input id="appointment-file" type="file" accept=".html,text/html" aria-label="Choose original Appointment Letter Generator HTML"><button class="btn primary" type="button" id="appointment-upload">Upload / Replace Original Generator</button></div>
+          </div>
+          <p id="appointment-status" class="fineprint" role="status" aria-live="polite">Open this page to load the original Word generator.</p>
+          <div id="appointment-frame-holder" class="hidden">
+            <iframe id="appointment-frame" title="Original PRIME Appointment Letter Generator" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" loading="lazy"></iframe>
+          </div>
+          <p class="fineprint">Generated DOCX downloads to your own device. Verify the letter before signing; separately record approval and issuance in the Letter Register. Details entered in the generator are not automatically saved in employee records.</p>
+        </article>
       </section>
       <section id="view-accounts" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Account approvals &amp; roles</h3></div><p class="muted">Only administrators can approve new signups, change roles, or deactivate access. Use matching verified emails to associate employee profiles.</p><div class="table-scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Access</th><th>Action</th></tr></thead><tbody id="account-rows"></tbody></table></div></article>
