@@ -56,9 +56,17 @@ async function loadData(){
  subscribeToAlerts();
  restorePushSubscription();
 }
+// Use the 1st and 3rd actual names, ignoring honorifics and initials.
+function greetingName(fullName){
+ const names=String(fullName||"").trim().split(/\s+/).filter(part=>
+  part&&!/^(?:Mr|Mrs|Ms|Miss|Dr|Prof)\.?$/i.test(part)
+      &&!/^(?:[A-Za-z]\.)+(?:[A-Za-z]\.?)?$/.test(part));
+ if(!names.length)return "Employee";
+ return names.length>1?names[0]+" "+names[names.length>=3?2:1]:names[0];
+}
 function render(){
  const e=state.employee;if(!e)return;
- $("mobileGreeting").textContent="Hello, "+(e.full_name?.split(" ")[0]||"Employee");
+ $("mobileGreeting").textContent="Hello, "+greetingName(e.full_name);
  $("mobileSubtitle").textContent=e.designation+" · "+e.staff_code;
  $("todayDate").textContent=today();$("homeStaffNo").textContent=e.staff_code;
  $("homeDetails").textContent=e.full_name+" · "+e.designation+" · "+(e.phone||"Phone not recorded");
