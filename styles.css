@@ -47,3 +47,13 @@ input,select,textarea{background:#fff;width:100%;border:1px solid #dae6df;border
 .sidebar::-webkit-scrollbar{width:7px}.sidebar::-webkit-scrollbar-thumb{background:#4d7b64;border-radius:8px}.sidebar::-webkit-scrollbar-track{background:#0d2922}
 .sidebar-brand,.sidebar-caption,.sidebar-bottom{flex-shrink:0}.sidebar nav{flex:0 0 auto;min-height:max-content}.sidebar-bottom{margin-top:16px}
 @media(max-width:750px){.sidebar{height:100dvh;max-height:100dvh;overflow-y:auto}}
+
+/* Private HR original Word appointment generator frame */
+.appointment-import{margin:18px 0;padding:17px;border:1px solid #d8e6dc;background:#f8fbf8;border-radius:12px}
+.appointment-import h4{margin:0 0 8px}
+.appointment-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.appointment-tools input[type=file]{max-width:100%;flex:1 1 300px}
+#appointment-status{margin:15px 0;white-space:pre-wrap}
+#appointment-frame-holder{border:1px solid #dce5df;border-radius:13px;overflow:hidden;background:#f2f5f2;margin:14px 0}
+#appointment-frame{display:block;width:100%;height:1000px;border:0;background:white}
+@media(max-width:790px){#appointment-frame{height:1200px}.appointment-tools{flex-direction:column;align-items:stretch}}
