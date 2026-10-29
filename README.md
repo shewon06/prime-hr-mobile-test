@@ -104,3 +104,14 @@ Mobile Employee App uses a single Attendance screen with **Check In**, **Field D
 - The Employee Mobile App checks this RPC on app startup, login, every 15 seconds while in the foreground, and when resumed. A revoked session is locally cleared and the login screen is displayed. A temporary network outage does not sign out valid users.
 - An already-open older version of the app **cannot be remotely forced to clear its rendered screen** without loading the updated app JavaScript: reload or completely close/reopen it while online. JWTs may remain valid until their normal expiry, even after server revocation.
 - Migration applied: \`prime_hr_verify_server_session_for_remote_employee_logout\`.
+
+
+## Original Word Appointment Generator (Admin / HR, 29 October 2026)
+
+The Admin workspace has an Appointment Generator screen, separate from the existing Letter Register and bulk draft workflow. The user-supplied standalone generator contains six original position-specific embedded Word templates: AGM Sales & Distribution, Zonal Sales Manager, Regional Sales Manager, Branch Sales Manager, Team Manager, Marketing Executive. The original code preserves its position-specific clauses, letterhead, annexures, salary fields, targets and DOCX downloads.
+
+**Privacy:** The original 2.6 MB HTML includes personal source employee information and sensitive appointment terms. It is NOT included in this public GitHub repo. Instead, Admin must import the original uploaded HTML once from the new Appointment Generator page using Upload / Replace Original Generator. File is stored in the private Supabase Storage bucket prime-appointment-templates at generator/PRIME_Appointment_Letter_System.html. Storage RLS allows download only by active Admin/HR and upload/replacement only by Admin. No public Storage URL.
+
+The saved HTML is loaded into a sandboxed iframe using allow-scripts and allow-downloads, without allow-same-origin. Additional CSP prohibits network access. DOCX files are downloaded directly to the user's device. Downloads are not automatically registered, issued or approved. HR must review documents and separately track approval and issue in Letter Register.
+
+**Deployment notes:** One-time original HTML import is required because embedding confidential original templates in a public repository would expose private employee details. The repository code does not include those template bytes. Real-browser private upload, iframe DOCX download, and live Cloudflare deployment still need confirmation.
