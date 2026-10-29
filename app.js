@@ -148,16 +148,18 @@
     if(isHR()){renderPayroll();renderLeaveBalances();renderLetterTemplates();renderLetterDrafts();renderOperationsSummary()}
   }
   function switchView(view) {
-    if(["employees","recruitment","locations","field-work","kpi","assets","letters","payroll"].includes(view)&&!isHR())return toast("HR access required.",true);
+    if(["employees","recruitment","locations","field-work","kpi","assets","letters","appointment-generator","payroll"].includes(view)&&!isHR())return toast("HR access required.",true);
     if(["accounts","staff-import"].includes(view)&&!isAdmin())return toast("Administrator access required.",true);
     if(!$( "view-"+view))return;
     state.view=view;
     document.querySelectorAll(".view").forEach(el=>el.classList.toggle("hidden",el.id!=="view-"+view));
     document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],payroll:["FINANCE & HR","Monthly Payroll","Draft calculations with Admin approval and payment confirmation."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
+    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],payroll:["FINANCE & HR","Monthly Payroll","Draft calculations with Admin approval and payment confirmation."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],"appointment-generator":["HR DOCUMENTATION","Appointment Letter Generator","Original Word templates with position-specific Annexures."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
     const t=titles[view];
     $("page-eyebrow").textContent=t[0];$("page-title").textContent=t[1];$("page-subtitle").textContent=t[2];$("crumb-label").textContent=t[1];
     document.querySelector(".sidebar").classList.remove("open");
+    if(view==="appointment-generator")void loadOriginalAppointmentGenerator();
+    else if($("appointment-frame").hasAttribute("srcdoc"))clearOriginalAppointmentFrame();
   }
   function renderEmployees() {
     const q=$("employee-search").value.toLowerCase();
@@ -1129,10 +1131,94 @@
     w.document.open();w.document.write(html);w.document.close();
   }
 
+
+  // The source document embeds six original Word templates with private
+  // source employee details. Never commit it to the public repository.
+  const APPOINTMENT_BUCKET="prime-appointment-templates";
+  const APPOINTMENT_OBJECT="generator/PRIME_Appointment_Letter_System.html";
+  let appointmentLoading=false;
+  let appointmentReady=false;
+  function appointmentValidSource(source){
+    if(typeof source!=="string"||source.length<10000||source.length>8*1024*1024)return false;
+    const ids=['id="app-data"',"PrimeAppointmentCore",'id="tpl-agm"','id="tpl-zsm"',
+       'id="tpl-rsm"','id="tpl-bsm"','id="tpl-tm"','id="tpl-me"'];
+    return ids.every(x=>source.includes(x))&&/<!doctype html/i.test(source);
+  }
+  function clearOriginalAppointmentFrame(){
+    $("appointment-frame").removeAttribute("srcdoc");
+    $("appointment-frame-holder").classList.add("hidden");
+    appointmentReady=false;
+  }
+  function appointmentStatus(msg,isError=false){
+    const status=$("appointment-status");
+    status.textContent=msg;
+    status.style.color=isError?"#9b3328":"";
+  }
+  async function loadOriginalAppointmentGenerator(force=false){
+    if(!isHR()||state.view!=="appointment-generator"||appointmentLoading)return;
+    if(appointmentReady&&!force)return;
+    appointmentLoading=true;
+    $("appointment-reload").disabled=true;
+    if(force)clearOriginalAppointmentFrame();
+    appointmentStatus("Loading original Word Appointment Generator from private HR storage...");
+    try{
+      const {data,error}=await state.client.storage.from(APPOINTMENT_BUCKET).download(APPOINTMENT_OBJECT);
+      if(error){
+        const missing=String(error.statusCode||error.status||"")==="404"
+          ||/not found|object not found/i.test(error.message||"");
+        if(missing)appointmentStatus(isAdmin()
+          ?"No original generator uploaded yet. Choose the supplied Appointment Letter System HTML file above and click Upload."
+          :"The original Appointment Letter Generator has not been imported yet. Please ask an Admin to upload it.");
+        else appointmentStatus("Unable to load the private Appointment Generator: "+error.message,true);
+        return;
+      }
+      const source=await data.text();
+      if(!appointmentValidSource(source))throw Error("The saved generator does not contain the required six original Word templates.");
+      // Sandboxed origin excludes parent app, auth token and database access.
+      // Extra CSP prohibits all external communication from the source document.
+      const csp='<meta http-equiv="Content-Security-Policy" content="default-src &#39;none&#39;; script-src &#39;unsafe-inline&#39;; style-src &#39;unsafe-inline&#39;; img-src data: blob:; font-src data:; connect-src &#39;none&#39;; form-action &#39;none&#39;; base-uri &#39;none&#39;">';
+      const isolated=source.replace(/<head([^>]*)>/i,match=>match+csp);
+      $("appointment-frame").srcdoc=isolated;
+      $("appointment-frame-holder").classList.remove("hidden");
+      appointmentReady=true;
+      appointmentStatus("Original Word generator ready — 6 position templates. Select a position, enter employee details and download DOCX.");
+    }catch(err){
+      appointmentStatus("Could not open original Word generator: "+(err?.message||String(err)),true);
+    }finally{
+      appointmentLoading=false;
+      $("appointment-reload").disabled=false;
+    }
+  }
+  async function uploadOriginalAppointmentGenerator(){
+    if(!isAdmin())return toast("Only Admin can upload original approved templates.",true);
+    const file=$("appointment-file").files?.[0];
+    if(!file)return toast("Choose the original .html Appointment Generator file first.",true);
+    if(!/\.html?$/i.test(file.name)||file.size>8*1024*1024||file.size<10000)
+      return toast("Choose the original self-contained HTML file, maximum 8 MB.",true);
+    const button=$("appointment-upload");
+    button.disabled=true;
+    appointmentStatus("Checking original appointment templates...");
+    try{
+      const source=await file.text();
+      if(!appointmentValidSource(source))throw Error("Invalid file: the six original Word templates are missing.");
+      appointmentStatus("Uploading original appointment system to private HR storage...");
+      const data=new Blob([source],{type:"application/octet-stream"});
+      const {error}=await state.client.storage.from(APPOINTMENT_BUCKET)
+        .upload(APPOINTMENT_OBJECT,data,{contentType:"application/octet-stream",cacheControl:"60",upsert:true});
+      if(error)throw error;
+      appointmentReady=false;
+      await loadOriginalAppointmentGenerator(true);
+      if(appointmentReady)toast("Original Word Appointment Generator saved for HR/Admin.");
+    }catch(err){
+      appointmentStatus("Upload failed: "+(err?.message||String(err)),true);
+      toast("Could not save original generator.",true);
+    }finally{button.disabled=false}
+  }
+
   function events() {
     $("auth-form").addEventListener("submit",submitAuth);
     $("toggle-auth").addEventListener("click",toggleAuth);
-    ["logout","pending-logout"].forEach(id=>$(id).addEventListener("click",async()=>{await state.client.auth.signOut();state.user=null;state.profile=null;screen("auth-screen")}));
+    ["logout","pending-logout"].forEach(id=>$(id).addEventListener("click",async()=>{clearOriginalAppointmentFrame();await state.client.auth.signOut();state.user=null;state.profile=null;screen("auth-screen")}));
     $("refresh").addEventListener("click",fetchData);
     $("field-team-filter").addEventListener("change",renderFieldReports);
     $("field-date-filter").addEventListener("change",renderFieldReports);
@@ -1150,6 +1236,8 @@
     $("candidate-export").addEventListener("click",exportCandidates);
     $("kpi-export").addEventListener("click",exportKpis);
     $("asset-export").addEventListener("click",exportAssets);
+    $("appointment-upload").addEventListener("click",uploadOriginalAppointmentGenerator);
+    $("appointment-reload").addEventListener("click",()=>loadOriginalAppointmentGenerator(true));
     $("letter-template-select").addEventListener("change",loadTemplateEditor);
     $("letter-template-form").addEventListener("submit",saveTemplate);
     $("letter-draft-form").addEventListener("submit",draftLettersBulk);
