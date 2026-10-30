@@ -91,7 +91,7 @@
     try {
       const all=[
         state.client.from("branches").select("id,name").order("name"),
-        state.client.from("employees").select("id,staff_code,full_name,email,phone,designation,department,branch_id,joined_on,status,staff_group,auth_user_id,national_id,address,date_of_birth,emergency_contact,employment_type,bank_name,bank_branch,bank_account,epf_no,etf_no,basic_salary,vehicle_allowance").order("full_name").limit(1000),
+        state.client.from("employees").select("id,staff_code,full_name,email,phone,designation,department,branch_id,joined_on,status,staff_group,auth_user_id,national_id,address,date_of_birth,emergency_contact,employment_type,bank_name,bank_account_name,bank_branch,bank_account,epf_no,etf_no,basic_salary,vehicle_allowance,sales_zone").order("full_name").limit(1000),
         state.client.from("attendance").select("id,employee_id,work_date,check_in,check_out,mode").order("check_in",{ascending:false}).limit(500),
         state.client.from("leave_requests").select("id,employee_id,kind,from_date,to_date,reason,status").order("created_at",{ascending:false}).limit(500)
       ];
@@ -163,8 +163,8 @@
   }
   function renderEmployees() {
     const q=$("employee-search").value.toLowerCase();
-    const rows=state.employees.filter(e=>!q||[e.full_name,e.staff_code,e.designation,e.staff_group||"office",branchName(e.branch_id)].join(" ").toLowerCase().includes(q));
-    $("employee-rows").innerHTML=rows.map(e=>'<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'<div class="muted">'+esc(e.phone||"")+'</div></td><td>'+esc(e.designation)+'</td><td>'+esc(e.staff_group||'office')+'</td><td>'+esc(branchName(e.branch_id))+'</td><td>'+fmtStatus(e.status)+'</td><td><button class="btn tiny outline" data-edit-employee="'+esc(e.id)+'">Edit</button></td></tr>').join("")||empty(7,"No employee records found");
+    const rows=state.employees.filter(e=>!q||[e.full_name,e.staff_code,e.designation,e.staff_group||"office",branchName(e.branch_id),e.sales_zone||""].join(" ").toLowerCase().includes(q));
+    $("employee-rows").innerHTML=rows.map(e=>'<tr><td><b>'+esc(e.staff_code)+'</b></td><td>'+esc(e.full_name)+'<div class="muted">'+esc(e.phone||"")+'</div></td><td>'+esc(e.designation)+'</td><td>'+esc(e.staff_group||'office')+'</td><td>'+esc(branchName(e.branch_id))+'</td><td>'+esc(e.sales_zone||"—")+'</td><td>'+fmtStatus(e.status)+'</td><td>'+esc(e.auth_user_id?"Linked":"No login")+'</td><td><button class="btn tiny outline" data-edit-employee="'+esc(e.id)+'">Edit</button></td></tr>').join("")||empty(9,"No employee records found");
   }
   function formValue(form,name){return form.elements.namedItem(name)?.value||""}
   function setFormValue(form,name,value){const e=form.elements.namedItem(name);if(e)e.value=value??""}
@@ -179,7 +179,7 @@
     fillBranchOptions();
     const e=state.employees.find(x=>x.id===id);
     const f=$("employee-form");f.reset();
-    ["id","staff_code","full_name","phone","designation","department","staff_group","branch_id","joined_on","status"].forEach(k=>setFormValue(f,k,e?.[k]||(k==="status"?"active":k==="staff_group"?"office":"")));
+    ["id","staff_code","full_name","phone","designation","department","staff_group","branch_id","joined_on","status","sales_zone","national_id","address","date_of_birth","basic_salary","bank_name","bank_account_name","bank_branch","bank_account"].forEach(k=>setFormValue(f,k,e?.[k]??(k==="status"?"active":k==="staff_group"?"office":"")));
     $("employee-modal-title").textContent=e?"Edit employee":"New employee";
     $("employee-dialog").showModal();
   }
@@ -189,20 +189,26 @@
     if(!id)return toast("Create employee accounts through the Admin-only Staff Accounts panel.",true);
     const record={full_name:formValue(f,"full_name").trim(),phone:formValue(f,"phone").trim()||null,
       designation:formValue(f,"designation").trim(),department:formValue(f,"department").trim()||null,staff_group:formValue(f,"staff_group")||"office",
-      branch_id:formValue(f,"branch_id"),joined_on:formValue(f,"joined_on")||null,status:formValue(f,"status")};
+      branch_id:formValue(f,"branch_id"),joined_on:formValue(f,"joined_on")||null,status:formValue(f,"status"),
+      sales_zone:formValue(f,"sales_zone").trim()||null,
+      national_id:formValue(f,"national_id").trim()||null,address:formValue(f,"address").trim()||null,
+      date_of_birth:formValue(f,"date_of_birth")||null,
+      basic_salary:formValue(f,"basic_salary")===""?null:Number(formValue(f,"basic_salary")),
+      bank_name:formValue(f,"bank_name").trim()||null,bank_account_name:formValue(f,"bank_account_name").trim()||null,
+      bank_branch:formValue(f,"bank_branch").trim()||null,bank_account:formValue(f,"bank_account").trim()||null};
     const {error}=await state.client.from("employees").update(record).eq("id",id);
     if(error)return toast(normalizeErr(error),true);
     $("employee-dialog").close();toast("Employee details updated.");await fetchData();
   }
   function exportCSV() {
     if(!isHR())return;
-    const fields=["staff_code","full_name","email","designation","department","staff_group","branch","joined_on","status"];
+    const fields=["staff_code","full_name","email","designation","department","staff_group","branch","sales_zone","joined_on","status","login_status"];
     const safe=value=>{
       let s=String(value??"");
       if(/^[\t\r=+\-@]/.test(s))s="'"+s;
       return '"'+s.replace(/"/g,'""')+'"';
     };
-    const rows=[fields,...state.employees.map(e=>[e.staff_code,e.full_name,e.email,e.designation,e.department,e.staff_group||"office",branchName(e.branch_id),e.joined_on,e.status])];
+    const rows=[fields,...state.employees.map(e=>[e.staff_code,e.full_name,e.email,e.designation,e.department,e.staff_group||"office",branchName(e.branch_id),e.sales_zone,e.joined_on,e.status,e.auth_user_id?"Linked":"No login"])];
     const csv="\ufeff"+rows.map(r=>r.map(safe).join(",")).join("\r\n");
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download="prime-employee-directory-"+localDate()+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
   }
@@ -526,7 +532,7 @@
   const staffColumns=[
     "staff_code","full_name","phone","designation","department","staff_group","branch","joined_on",
     "status","national_id","address","date_of_birth","emergency_contact","employment_type",
-    "bank_name","bank_branch","bank_account","epf_no","etf_no","basic_salary","vehicle_allowance"
+    "bank_name","bank_account_name","bank_branch","bank_account","epf_no","etf_no","basic_salary","vehicle_allowance"
   ];
   function columnName(value){
     const x=String(value??"").toLowerCase().replace(/[^a-z0-9]/g,"");
@@ -630,7 +636,7 @@
   function exportCompleteStaffMaster(){
     if(!isAdmin())return toast("Administrator access required.",true);
     if(!confirm("Export the complete staff master including NIC, salary and bank details? Store this sensitive file securely."))return;
-    const fields=["staff_code","full_name","phone","designation","department","staff_group","branch","joined_on","status",
+    const fields=["staff_code","full_name","phone","designation","department","staff_group","branch","sales_zone","joined_on","status",
       "national_id","address","date_of_birth","emergency_contact","employment_type",
       "bank_name","bank_branch","bank_account","epf_no","etf_no","basic_salary","vehicle_allowance"];
     const records=state.employees.map(e=>({
