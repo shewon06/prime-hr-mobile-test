@@ -54,7 +54,22 @@ window.PrimeAppointmentV2={render:async()=>{
 const b=B();if(!b?.isHR)return;
 const s=$("ap-v3-employee"),old=s.value;s.replaceChildren(new Option("Select Employee",""),...b.state.employees.filter(e=>e.status==="active").map(e=>new Option(e.staff_code+" — "+e.full_name,e.id)));s.value=old;
 s.onchange=select;
-$("ap-v3-generate").onclick=async()=>{if(!chosen)return;const role=roles.find(r=>r.toLowerCase()===chosen.designation.toLowerCase());if(!role)return;const data=await call("document",role);$("ap-v3-status").textContent="Letter loaded: "+data.template.position};
+$("ap-v3-generate").onclick=async()=>{
+ const btn=$("ap-v3-generate");
+ try{
+  if(!chosen)return;
+  const current=B().state.employees.find(e=>e.id===chosen.id);
+  if(!current)throw Error("Employee not found in Staff Master");
+  const role=roles.find(r=>r.toLowerCase()===(({"AGM":"Assistant General Manager","Cluster Sales Manager":"Cluster Manager"})[current.designation]||current.designation).trim().toLowerCase());
+  if(!role)throw Error("No matching updated letter for designation");
+  btn.disabled=true;
+  $("ap-v3-status").textContent="Preparing "+role+" letter...";
+  const result=await call("document",role);
+  createPreview(result.template,current);
+  $("ap-v3-status").textContent="Appointment letter preview ready. Review before issuing.";
+ }catch(error){$("ap-v3-status").textContent="Could not generate: "+error.message}
+ finally{select()}
+};
 if(!roles.length){try{roles=(await call("list")).positions;select()}catch(e){$("ap-v3-status").textContent=e.message}}
 }};
 })();
