@@ -24,7 +24,7 @@ function dateString(input){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return "";
  const [y,m,d]=iso.split("-").map(Number);
  const months=["January","February","March","April","May","June","July","August","September","October","November","December"];
- return d+" "+months[m-1]+" "+y;
+ return String(d).padStart(2,"0")+" "+months[m-1]+" "+y;
 }
 function today(){
  const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"2-digit",year:"numeric"}).formatToParts(new Date());
