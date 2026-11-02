@@ -38,7 +38,7 @@ function replacements(e){
  "[EMPLOYEE ADDRESS LINE 1]":addr[0]||"",
  "[EMPLOYEE ADDRESS LINE 2]":addr.slice(1).join(", "),
  "[LETTER ISSUE DATE]":today(),
- "[APPOINTMENT EFFECTIVE DATE]":dateString(e.appointment_effective_date),
+ "[APPOINTMENT EFFECTIVE DATE]":dateString(e.joined_on),
  "[NIC NUMBER]":e.national_id
  };
 }
@@ -47,7 +47,7 @@ function incomplete(e){
  if(!e.full_name)list.push("Name");
  if(!e.national_id)list.push("NIC");
  if(!e.address)list.push("Address");
- if(!e.appointment_effective_date)list.push("Appointment Effective Date");
+ if(!e.joined_on)list.push("Joining Date");
  return list;
 }
 function xmlEscape(v){
