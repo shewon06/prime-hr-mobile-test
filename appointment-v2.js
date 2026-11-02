@@ -118,7 +118,7 @@ function mergeStrict(text,data){
 function createRow(c,row){
  const e=getEmployee(c,row.staff_code),template=findTemplate(c,e,row.template_name);
  const no=String(row.document_no||"PRIME-AP-"+ensureDate(row.letter_date||today(),"Letter date").slice(0,4)+"-"+code(e.staff_code)).trim();
- if(no.length<3||no.length>100||!/^[A-Za-z0-9/_-]+$/.test(no))throw Error("Invalid Document Number.");
+ if(no.length<3||no.length>75||!/^[A-Za-z0-9/_-]+$/.test(no))throw Error("Invalid Document Number.");
  const fields=contentFields(c,e,row,no);
  const subject=mergeStrict(template.subject,fields),body=mergeStrict(template.body,fields);
  if(!subject.trim()||body.trim().length<30)throw Error("Template subject/body must contain approved wording.");
