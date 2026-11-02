@@ -11,7 +11,7 @@ const publicFiles=[
   "index.html",
   "employee.html",
   "app.js",
-  "appointment-v2.js",
+  "appointment-v3.js",
   "employee.js",
   "styles.css",
   "config.js",
