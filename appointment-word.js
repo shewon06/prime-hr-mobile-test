@@ -27,7 +27,9 @@ function dateString(input){
  return d+" "+months[m-1]+" "+y;
 }
 function today(){
- return dateString(new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Colombo",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()));
+ const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Asia/Colombo",day:"2-digit",month:"2-digit",year:"numeric"}).formatToParts(new Date());
+ const read=key=>parts.find(p=>p.type===key)?.value||"";
+ return dateString(read("year")+"-"+read("month")+"-"+read("day"));
 }
 function replacements(e){
  const addr=String(e.address||"").split(/\r?\n|,/).map(v=>v.trim()).filter(Boolean);
