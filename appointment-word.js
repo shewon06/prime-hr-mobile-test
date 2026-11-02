@@ -129,4 +129,50 @@ function render(){
  choose();
 }
 
+async function uploadOriginals(){
+ const b=bridge(),input=$("ap-word-zip"),button=$("ap-word-upload");
+ if(!b?.isAdmin)return setStatus("ap-word-upload-status","Only Admin can install official Word templates.");
+ if(!window.JSZip)return setStatus("ap-word-upload-status","JSZip could not load. Reload app.");
+ const file=input?.files?.[0];
+ if(!file)return setStatus("ap-word-upload-status","Select the updated 15 Appointment Letters ZIP first.");
+ button.disabled=true;
+ try{
+  setStatus("ap-word-upload-status","Checking original Word ZIP...");
+  const archive=await JSZip.loadAsync(file);
+  const verified=[];
+  for(const role of roles){
+   const original="Editable_DOCX/Appointment_Letter_"+role.replace(/\s+/g,"_")+".docx";
+   const item=archive.file(original);
+   if(!item)throw Error("Missing updated original Word file for "+role);
+   const bytes=await item.async("uint8array");
+   const doc=await JSZip.loadAsync(bytes);
+   const part=doc.file("word/document.xml");
+   if(!part)throw Error("Corrupt original Word file for "+role);
+   const xml=await part.async("string");
+   for(const token of requirements)if(!xml.includes(token))throw Error("Missing original Word marker "+token+" in "+role);
+   verified.push({role,bytes});
+  }
+  for(let i=0;i<verified.length;i++){
+   const {role,bytes}=verified[i];
+   setStatus("ap-word-upload-status","Saving original Word templates: "+(i+1)+"/15 — "+role);
+   const {error}=await b.state.client.storage.from(bucket).upload(pathForRole(role),bytes,
+    {contentType:"application/octet-stream",upsert:true,cacheControl:"0"});
+   if(error)throw Error(role+": "+error.message);
+  }
+  await templateReady();
+  setStatus("ap-word-upload-status","All 15 original Word documents securely installed. Appointment tab is now ready.");
+  input.value="";
+ }catch(e){setStatus("ap-word-upload-status","Setup failed: "+e.message)}
+ finally{button.disabled=false}
+}
+window.PrimeAppointmentV2={render};
+if(document.readyState==="loading"){
+ document.addEventListener("DOMContentLoaded",()=>{
+  $("ap-word-upload")?.addEventListener("click",uploadOriginals);
+  $("appointment-word-setup")?.addEventListener("toggle",()=>{if($("appointment-word-setup").open&&bridge()?.isAdmin)templateReady().catch(e=>setStatus("ap-word-upload-status",e.message))});
+ });
+}else{
+ $("ap-word-upload")?.addEventListener("click",uploadOriginals);
+}
+
 })();
