@@ -26,8 +26,7 @@ function fill(line,employee){
  };
  return Object.entries(data).reduce((v,[key,val])=>v.split(key).join(val),String(line||""));
 }
-function createPreview(template,employee){
- const page=window.open("about:blank","_blank");
+function createPreview(template,employee,page){
  if(!page)throw Error("Allow popups to preview the letter.");
  const doc=page.document;
  doc.title="PRIME Appointment Letter - "+employee.staff_code;
@@ -64,8 +63,10 @@ $("ap-v3-generate").onclick=async()=>{
   if(!role)throw Error("No matching updated letter for designation");
   btn.disabled=true;
   $("ap-v3-status").textContent="Preparing "+role+" letter...";
+  const popup=window.open("about:blank","_blank");
+  if(!popup)throw Error("Please enable popups for appointment previews.");
   const result=await call("document",role);
-  createPreview(result.template,current);
+  createPreview(result.template,current,popup);
   $("ap-v3-status").textContent="Appointment letter preview ready. Review before issuing.";
  }catch(error){$("ap-v3-status").textContent="Could not generate: "+error.message}
  finally{select()}
