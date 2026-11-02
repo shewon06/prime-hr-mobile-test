@@ -17,7 +17,7 @@ window.PrimeAppointmentV2={render:async()=>{
 const b=B();if(!b?.isHR)return;
 const s=$("ap-v3-employee"),old=s.value;s.replaceChildren(new Option("Select Employee",""),...b.state.employees.filter(e=>e.status==="active").map(e=>new Option(e.staff_code+" — "+e.full_name,e.id)));s.value=old;
 s.onchange=select;
-$("ap-v3-generate").onclick=()=>{$("ap-v3-status").textContent="Preparing the updated appointment letter."};
+$("ap-v3-generate").onclick=async()=>{if(!chosen)return;const role=roles.find(r=>r.toLowerCase()===chosen.designation.toLowerCase());if(!role)return;const data=await call("document",role);$("ap-v3-status").textContent="Letter loaded: "+data.template.position};
 if(!roles.length){try{roles=(await call("list")).positions;select()}catch(e){$("ap-v3-status").textContent=e.message}}
 }};
 })();
