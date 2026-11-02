@@ -11,6 +11,7 @@ const publicFiles=[
   "index.html",
   "employee.html",
   "app.js",
+  "appointment-v2.js",
   "employee.js",
   "styles.css",
   "config.js",
@@ -58,6 +59,9 @@ const headers=String.raw`/*
   Cache-Control: no-cache, must-revalidate
 
 /app.js
+  Cache-Control: no-cache, must-revalidate
+
+/appointment-v2.js
   Cache-Control: no-cache, must-revalidate
 
 /employee.js
