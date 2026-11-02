@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="./config.js"></script>
-  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script defer src="./app.js"></script>
+  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script defer src="./app.js"></script><script defer src="./appointment-v2.js"></script>
 </head>
 <body>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -186,7 +186,7 @@
       </section>
       <section id="view-letters" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
-        <button class="btn outline" type="button" data-go="appointment-generator">Open Original Word Appointment Generator</button>
+        <button class="btn outline" type="button" data-go="appointment-generator">Open Updated Appointment Builder</button>
         <p class="fineprint">Admin must upload/enter company-approved exact position-specific wording first. This workflow only creates unsigned drafts, requires Admin approval, and records issuance. It does not generate legal clauses automatically.</p>
  <div class="split">
  <div><h4>Company Appointment / HR Letter Template (Admin Only)</h4>
@@ -216,18 +216,58 @@
 
       <section id="view-appointment-generator" class="view hidden">
         <article class="panel">
-          <div class="panel-head"><h3>Original PRIME Appointment Letter Generator</h3><button class="btn outline" type="button" id="appointment-reload">Reload Generator</button></div>
-          <p class="fineprint">Generate original Word Appointment Letters with position-specific Annexures. The original Word templates, clauses, letterhead and formatting are not modified.</p>
-          <div class="appointment-import admin-only" id="appointment-import">
-            <h4>Admin Setup — Import Original Appointment System</h4>
-            <p class="fineprint">One-time setup: upload the original PRIME Appointment Letter System HTML file (with 6 Word templates). The document is saved in private HR cloud storage, not in public GitHub source. After import, HR/Admin can open it on authenticated computers.</p>
-            <div class="appointment-tools"><input id="appointment-file" type="file" accept=".html,text/html" aria-label="Choose original Appointment Letter Generator HTML"><button class="btn primary" type="button" id="appointment-upload">Upload / Replace Original Generator</button></div>
+          <div class="panel-head"><div><h3>Appointment Builder V2 — Updated Letters</h3><p class="fineprint">One updated template library for all designations. Manual entry or one Excel upload can generate multiple unsigned appointment drafts. No original six-template file is needed.</p></div><button class="btn outline" type="button" data-go="letters">Open Letter Register / Approvals</button></div>
+          <p id="appointment-v2-status" class="fineprint" role="status" aria-live="polite">Loading employee and approved appointment templates...</p>
+          <div class="split">
+            <div class="admin-only">
+              <h4>1 · Add updated templates in ONE upload (Admin)</h4>
+              <p class="fineprint">Download the template sheet, enter the exact updated wording for up to 15 (or more) designation templates, and upload once. Imported templates stay <b>Draft</b> until individually checked and approved in the Letter Register; existing templates are never overwritten.</p>
+              <div class="appointment-tools">
+                <button class="btn outline" type="button" id="ap-v2-template-sample">Download Template Sheet</button>
+                <input id="ap-v2-template-file" type="file" accept=".xlsx,.xls,.csv" aria-label="Select updated appointment template workbook">
+                <button class="btn primary" type="button" id="ap-v2-template-import">Import Template Library</button>
+              </div>
+              <p class="fineprint">Store actual terms only in the private HR database, never in public GitHub or unapproved example files.</p>
+            </div>
+            <div>
+              <h4>2 · Approved template library</h4>
+              <div id="ap-v2-template-summary" class="fineprint">No templates loaded.</div>
+              <div class="table-scroll"><table><thead><tr><th>Template</th><th>Designation</th><th>Version</th><th>Status</th></tr></thead><tbody id="ap-v2-templates"></tbody></table></div>
+            </div>
           </div>
-          <p id="appointment-status" class="fineprint" role="status" aria-live="polite">Open this page to load the original Word generator.</p>
-          <div id="appointment-frame-holder" class="hidden">
-            <iframe id="appointment-frame" title="Original PRIME Appointment Letter Generator" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" loading="lazy"></iframe>
+        </article>
+        <article class="panel">
+          <h3>Manual Appointment — One Employee</h3>
+          <p class="fineprint">Employee details are read from Staff Master. Effective appointment date must be explicitly entered and is never assumed from joining date.</p>
+          <form id="ap-v2-manual" class="form-grid">
+            <label>Employee *<select name="staff_code" id="ap-v2-employee" required></select></label>
+            <label>Approved Designation Template *<select name="template_id" id="ap-v2-manual-template" required></select></label>
+            <label>Document Number *<input name="document_no" id="ap-v2-document" maxlength="75" required placeholder="PRIME-AP-2026-M010"></label>
+            <div class="two"><label>Letter Date *<input type="date" name="letter_date" required></label><label>Effective Appointment Date *<input type="date" name="effective_date" required></label></div>
+            <label>NIC (optional)<input name="nic" maxlength="30"></label>
+            <label>Address (optional)<textarea name="address" rows="2" maxlength="600"></textarea></label>
+            <div class="two"><label>Basic Salary (LKR)<input name="basic_salary" type="number" min="0" step="0.01"></label><label>Vehicle Allowance (LKR)<input name="vehicle_allowance" type="number" min="0" step="0.01"></label></div>
+            <div class="two"><label>Fuel Allowance (e.g. 200 Litres)<input name="fuel_allowance" maxlength="100"></label><label>Monthly Target (LKR)<input name="monthly_target" type="number" min="0" step="0.01"></label></div>
+            <label>Notes (optional)<textarea name="notes" rows="2" maxlength="1000"></textarea></label>
+            <button class="btn primary" type="submit">Generate Unsigned Appointment Draft</button>
+          </form>
+        </article>
+        <article class="panel">
+          <h3>Bulk Appointment — One Upload for 15 or More</h3>
+          <p class="fineprint">Each Excel row is a separate appointment; different designations can use different approved templates in the same batch. Template Name is optional if one unambiguous approved designation match is found. The batch is validated before anything is saved.</p>
+          <div class="appointment-tools">
+            <button class="btn outline" type="button" id="ap-v2-bulk-sample">Download 15-Row Excel Template</button>
+            <input id="ap-v2-bulk-file" type="file" accept=".xlsx,.xls,.csv" aria-label="Select bulk appointment workbook">
+            <button class="btn" type="button" id="ap-v2-preview">Validate / Preview</button>
+            <button class="btn primary" type="button" id="ap-v2-save" disabled>Generate Validated Drafts</button>
           </div>
-          <p class="fineprint">Generated DOCX downloads to your own device. Verify the letter before signing; separately record approval and issuance in the Letter Register. Details entered in the generator are not automatically saved in employee records.</p>
+          <p id="ap-v2-upload-info" class="fineprint"></p>
+          <div class="table-scroll"><table><thead><tr><th>Row</th><th>Staff Code</th><th>Employee</th><th>Template</th><th>Document No.</th><th>Check</th></tr></thead><tbody id="ap-v2-preview-rows"><tr><td colspan="6">Upload the completed Excel sheet to preview.</td></tr></tbody></table></div>
+          <p class="fineprint">No document is signed or issued by bulk generation. Admin review, approval and issuance are recorded separately in the Letter Register. This tool creates document text, not a substitute for legal approval or a final signed Word layout.</p>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h3>Recent Appointment Drafts</h3><button class="btn outline" type="button" data-go="letters">View all / Approve / Issue</button></div>
+          <div class="table-scroll"><table><thead><tr><th>Document</th><th>Employee</th><th>Subject</th><th>Status</th><th>Preview</th></tr></thead><tbody id="ap-v2-drafts"></tbody></table></div>
         </article>
       </section>
       <section id="view-accounts" class="view hidden">

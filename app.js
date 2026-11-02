@@ -146,6 +146,7 @@
     renderEmployees();renderAttendance();renderLeave();renderCandidates();renderAccounts();
     renderLocations();renderFieldReports();renderNotices();renderProfile();renderKpi();renderAssets();renderLetters();renderStaffAccounts();
     if(isHR()){renderPayroll();renderLeaveBalances();renderLetterTemplates();renderLetterDrafts();renderOperationsSummary()}
+    if(isHR()&&state.view==="appointment-generator")window.PrimeAppointmentV2?.render();
   }
   function switchView(view) {
     if(["employees","recruitment","locations","field-work","kpi","assets","letters","appointment-generator","payroll"].includes(view)&&!isHR())return toast("HR access required.",true);
@@ -154,12 +155,11 @@
     state.view=view;
     document.querySelectorAll(".view").forEach(el=>el.classList.toggle("hidden",el.id!=="view-"+view));
     document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===view));
-    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],payroll:["FINANCE & HR","Monthly Payroll","Draft calculations with Admin approval and payment confirmation."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],"appointment-generator":["HR DOCUMENTATION","Appointment Letter Generator","Original Word templates with position-specific Annexures."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
+    const titles={dashboard:["MANAGEMENT CENTRE","Workforce overview","Live, permission-controlled people operations."],employees:["PEOPLE OPERATIONS","Employee directory","Manage the master record of PRIME team members."],attendance:["TIME & ATTENDANCE","Attendance tracker","Check in, check out and review times."],leave:["WORKFORCE PLANNING","Leave management","Apply, monitor and approve leave requests."],payroll:["FINANCE & HR","Monthly Payroll","Draft calculations with Admin approval and payment confirmation."],recruitment:["TALENT ACQUISITION","Recruitment pipeline","Manage applicants and interview stages."],locations:["GPS REPORT","Staff locations","Check-in/out GPS snapshots visible to HR/Admin only."],"field-work":["FIELD OPERATIONS","Sales & Plantation Work Reports","Customer visits, site inspections, field work and submission location."],notices:["COMPANY UPDATES","HR Notices","Read and acknowledge company circulars."],profile:["SELF SERVICE","My Profile","Your personal HR account."],kpi:["SALES PERFORMANCE","Sales KPI","Targets and monthly results."],assets:["COMPANY RESOURCES","Asset Register","Allocated equipment, vehicle and devices."],letters:["HR DOCUMENTATION","Letter Register","Draft and issued HR correspondence."],"appointment-generator":["HR DOCUMENTATION","Appointment Builder V2","Updated appointment templates, manual entry and Excel bulk generation."],accounts:["ACCESS & SECURITY","Admin role permissions","Manage internal HR administrators."],"staff-import":["STAFF PROVISIONING","Staff Accounts & Excel Import","Employee Number login, secure Admin creation and bulk upload."],roadmap:["PRODUCT DEVELOPMENT","Upcoming modules","Planned functionality—not live yet."]};
     const t=titles[view];
     $("page-eyebrow").textContent=t[0];$("page-title").textContent=t[1];$("page-subtitle").textContent=t[2];$("crumb-label").textContent=t[1];
     document.querySelector(".sidebar").classList.remove("open");
-    if(view==="appointment-generator")void loadOriginalAppointmentGenerator();
-    else if($("appointment-frame").hasAttribute("srcdoc"))clearOriginalAppointmentFrame();
+    if(view==="appointment-generator")window.PrimeAppointmentV2?.render();
   }
   function renderEmployees() {
     const q=$("employee-search").value.toLowerCase();
@@ -1242,8 +1242,6 @@
     $("candidate-export").addEventListener("click",exportCandidates);
     $("kpi-export").addEventListener("click",exportKpis);
     $("asset-export").addEventListener("click",exportAssets);
-    $("appointment-upload").addEventListener("click",uploadOriginalAppointmentGenerator);
-    $("appointment-reload").addEventListener("click",()=>loadOriginalAppointmentGenerator(true));
     $("letter-template-select").addEventListener("change",loadTemplateEditor);
     $("letter-template-form").addEventListener("submit",saveTemplate);
     $("letter-draft-form").addEventListener("submit",draftLettersBulk);
@@ -1327,5 +1325,6 @@
       await loadSession();
     }catch(err){console.error(err);screen("setup-screen");toast("Cloud initialization failed. Check configuration.",true)}
   }
+  window.PrimeAppointmentBridge=()=>({state,isHR:isHR(),isAdmin:isAdmin(),toast,branchName,refresh:fetchData});
   document.addEventListener("DOMContentLoaded",init);
 })();
