@@ -26,6 +26,30 @@ function fill(line,employee){
  };
  return Object.entries(data).reduce((v,[key,val])=>v.split(key).join(val),String(line||""));
 }
+function createPreview(template,employee){
+ const page=window.open("about:blank","_blank");
+ if(!page)throw Error("Allow popups to preview the letter.");
+ const doc=page.document;
+ doc.title="PRIME Appointment Letter - "+employee.staff_code;
+ const style=doc.createElement("style");
+ style.textContent="@page{size:A4;margin:16mm}body{font:13px/1.45 Georgia,serif;max-width:800px;margin:16px auto;color:#222}p{margin:0 0 9px;white-space:pre-wrap}table{border-collapse:collapse;width:100%;margin:16px 0;font:12px Arial}td{padding:6px;border:1px solid #999}header{font:bold 25px Arial;text-align:center;padding:10px 0;border-bottom:2px solid #b49a4e;color:#987b1f}@media print{button,.notice{display:none}body{margin:0;max-width:none}}";
+ doc.head.appendChild(style);
+ const action=doc.createElement("button");action.type="button";action.textContent="Print / Save PDF";action.addEventListener("click",()=>page.print());doc.body.appendChild(action);
+ const banner=doc.createElement("header");banner.textContent="PRIME AGRI BUSINESS & PLANTATIONS";doc.body.appendChild(banner);
+ const note=doc.createElement("p");note.className="notice";note.textContent="Preview from updated Word letter. Verify all fields and legal clauses before issuing.";doc.body.appendChild(note);
+ for(const line of template.paragraphs){
+  const p=doc.createElement("p");p.textContent=fill(line,employee);doc.body.appendChild(p);
+ }
+ for(const rows of template.tables){
+  const table=doc.createElement("table");
+  for(const cells of rows){
+   const tr=doc.createElement("tr");
+   for(const cell of cells){const td=doc.createElement("td");td.textContent=fill(cell,employee);tr.appendChild(td)}
+   table.appendChild(tr);
+  }
+  doc.body.appendChild(table);
+ }
+}
 window.PrimeAppointmentV2={render:async()=>{
 const b=B();if(!b?.isHR)return;
 const s=$("ap-v3-employee"),old=s.value;s.replaceChildren(new Option("Select Employee",""),...b.state.employees.filter(e=>e.status==="active").map(e=>new Option(e.staff_code+" — "+e.full_name,e.id)));s.value=old;
