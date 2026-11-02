@@ -179,7 +179,7 @@
     fillBranchOptions();
     const e=state.employees.find(x=>x.id===id);
     const f=$("employee-form");f.reset();
-    ["id","staff_code","full_name","phone","designation","department","staff_group","branch_id","joined_on","appointment_effective_date","status","sales_zone","national_id","address","date_of_birth","basic_salary","bank_name","bank_account_name","bank_branch","bank_account"].forEach(k=>setFormValue(f,k,e?.[k]??(k==="status"?"active":k==="staff_group"?"office":"")));
+    ["id","staff_code","full_name","phone","designation","department","staff_group","branch_id","joined_on","status","sales_zone","national_id","address","date_of_birth","basic_salary","bank_name","bank_account_name","bank_branch","bank_account"].forEach(k=>setFormValue(f,k,e?.[k]??(k==="status"?"active":k==="staff_group"?"office":"")));
     $("employee-modal-title").textContent=e?"Edit employee":"New employee";
     $("employee-dialog").showModal();
   }
@@ -189,7 +189,7 @@
     if(!id)return toast("Create employee accounts through the Admin-only Staff Accounts panel.",true);
     const record={full_name:formValue(f,"full_name").trim(),phone:formValue(f,"phone").trim()||null,
       designation:formValue(f,"designation").trim(),department:formValue(f,"department").trim()||null,staff_group:formValue(f,"staff_group")||"office",
-      branch_id:formValue(f,"branch_id"),joined_on:formValue(f,"joined_on")||null,appointment_effective_date:formValue(f,"appointment_effective_date")||null,status:formValue(f,"status"),
+      branch_id:formValue(f,"branch_id"),joined_on:formValue(f,"joined_on")||null,status:formValue(f,"status"),
       sales_zone:formValue(f,"sales_zone").trim()||null,
       national_id:formValue(f,"national_id").trim()||null,address:formValue(f,"address").trim()||null,
       date_of_birth:formValue(f,"date_of_birth")||null,
