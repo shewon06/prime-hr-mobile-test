@@ -1,0 +1,1 @@
+window.PrimeAppointmentV2={render(){console.info('Appointment panel ready')}};
