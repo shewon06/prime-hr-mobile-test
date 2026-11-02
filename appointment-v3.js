@@ -36,10 +36,8 @@ function createPreview(template,employee,page){
  const action=doc.createElement("button");action.type="button";action.textContent="Print / Save PDF";action.addEventListener("click",()=>page.print());doc.body.appendChild(action);
  const banner=doc.createElement("header");banner.textContent="PRIME AGRI BUSINESS & PLANTATIONS";doc.body.appendChild(banner);
  const note=doc.createElement("p");note.className="notice";note.textContent="Preview from updated Word letter. Verify all fields and legal clauses before issuing.";doc.body.appendChild(note);
- for(const line of template.paragraphs){
-  const p=doc.createElement("p");p.textContent=fill(line,employee);doc.body.appendChild(p);
- }
- for(const rows of template.tables){
+ let paragraphCount=0;
+ function addTable(rows){
   const table=doc.createElement("table");
   for(const cells of rows){
    const tr=doc.createElement("tr");
@@ -48,6 +46,13 @@ function createPreview(template,employee,page){
   }
   doc.body.appendChild(table);
  }
+ for(const line of template.paragraphs){
+  const p=doc.createElement("p");p.textContent=fill(line,employee);doc.body.appendChild(p);
+  paragraphCount++;
+  const index=paragraphCount-92;
+  if(index>=0&&index<template.tables.length)addTable(template.tables[index]);
+ }
+
 }
 window.PrimeAppointmentV2={render:async()=>{
 const b=B();if(!b?.isHR)return;
