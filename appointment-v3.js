@@ -33,9 +33,10 @@ function createPreview(template,employee,page){
  const style=doc.createElement("style");
  style.textContent="@page{size:A4;margin:16mm}body{font:13px/1.45 Georgia,serif;max-width:800px;margin:16px auto;color:#222}p{margin:0 0 9px;white-space:pre-wrap}table{border-collapse:collapse;width:100%;margin:16px 0;font:12px Arial}td{padding:6px;border:1px solid #999}header{font:bold 25px Arial;text-align:center;padding:10px 0;border-bottom:2px solid #b49a4e;color:#987b1f}@media print{button,.notice{display:none}body{margin:0;max-width:none}}";
  doc.head.appendChild(style);
- const action=doc.createElement("button");action.type="button";action.textContent="Print / Save PDF";action.addEventListener("click",()=>page.print());doc.body.appendChild(action);
+ const hasUnfilled=template.paragraphs.some(p=>/\[[A-Z][A-Z0-9 ]+\]/.test(fill(p,employee)))||template.tables.some(t=>t.some(row=>row.some(cell=>/\[[A-Z][A-Z0-9 ]+\]/.test(fill(cell,employee)))));
+ const action=doc.createElement("button");action.type="button";action.textContent=hasUnfilled?"Complete Staff Master fields before printing":"Print / Save PDF";action.disabled=hasUnfilled;action.addEventListener("click",()=>page.print());doc.body.appendChild(action);
  const banner=doc.createElement("header");banner.textContent="PRIME AGRI BUSINESS & PLANTATIONS";doc.body.appendChild(banner);
- const note=doc.createElement("p");note.className="notice";note.textContent="Preview from updated Word letter. Verify all fields and legal clauses before issuing.";doc.body.appendChild(note);
+ const note=doc.createElement("p");note.className="notice";note.textContent=hasUnfilled?"DRAFT ONLY: Missing Staff Master details or unapproved placeholder. Complete them before printing.":"Preview from updated Word letter. Verify all fields and legal clauses before issuing.";doc.body.appendChild(note);
  let paragraphCount=0;
  function addTable(rows){
   const table=doc.createElement("table");
