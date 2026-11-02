@@ -75,7 +75,7 @@ $("ap-v3-generate").onclick=async()=>{
   createPreview(result.template,current,popup);
   $("ap-v3-status").textContent="Appointment letter preview ready. Review before issuing.";
  }catch(error){$("ap-v3-status").textContent="Could not generate: "+error.message}
- finally{select()}
+ finally{const message=$("ap-v3-status").textContent;select();$("ap-v3-status").textContent=message}
 };
 if(!roles.length){try{roles=(await call("list")).positions;select()}catch(e){$("ap-v3-status").textContent=e.message}}
 }};
