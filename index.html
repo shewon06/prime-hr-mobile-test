@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./styles.css">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="./config.js"></script>
-  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script defer src="./app.js"></script><script defer src="./appointment-v3.js"></script>
+  <script defer src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script defer src="./app.js"></script><script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script><script defer src="./appointment-v3.js"></script>
 </head>
 <body>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -187,6 +187,12 @@
       <section id="view-letters" class="view hidden">
         <article class="panel"><div class="panel-head"><h3>Appointment / HR Letter Register</h3><button class="btn primary" id="letter-add">+ Record letter</button></div>
         <button class="btn outline" type="button" data-go="appointment-generator">Open Updated Appointment Builder</button>
+<details class="admin-only" id="appointment-word-setup" style="margin:16px 0"><summary><b>Original Word Templates — one-time Admin Setup</b></summary>
+ <p class="fineprint">Upload the original ZIP containing all 15 editable Word appointment letters here once. Original .docx files are kept in private HR storage. The Appointment Letter Generator tab remains employee selection only.</p>
+ <input id="ap-word-zip" type="file" accept=".zip,application/zip">
+ <button id="ap-word-upload" class="btn outline" type="button">Save original Word templates</button>
+ <p id="ap-word-upload-status" class="fineprint" role="status">No upload started</p>
+ </details>
         <p class="fineprint">Admin must upload/enter company-approved exact position-specific wording first. This workflow only creates unsigned drafts, requires Admin approval, and records issuance. It does not generate legal clauses automatically.</p>
  <div class="split">
  <div><h4>Company Appointment / HR Letter Template (Admin Only)</h4>
@@ -223,7 +229,7 @@
           <p id="ap-v3-status" class="fineprint" role="status"></p>
           <div id="ap-v3-details" class="hidden" style="margin:20px 0"></div>
           <button id="ap-v3-generate" class="btn primary" type="button" disabled>Generate Appointment Letter</button>
-          <p class="fineprint">Official terms and signatures are preserved for management review. Missing employee details are never invented.</p>
+          <p class="fineprint">Downloads the original editable Word (.docx) letter with Staff Master fields filled in. Incomplete mandatory fields are blocked.</p>
         </article>
       </section>
       <section id="view-accounts" class="view hidden">
