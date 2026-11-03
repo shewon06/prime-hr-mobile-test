@@ -42,12 +42,40 @@ function replacements(e){
  "[NIC NUMBER]":e.national_id
  };
 }
+function autoSalutation(e){
+ const selected=String(e?.appointment_salutation||"").trim();
+ if(selected==="Sir"||selected==="Madam")return selected;
+ const name=String(e?.full_name||"").trim();
+ if(/^(Mr|Mister)\.?\s+/i.test(name))return "Sir";
+ if(/^(Mrs|Ms|Miss)\.?\s+/i.test(name))return "Madam";
+ return "";
+}
+function restyleWordXml(xml){
+ // Word stores font sizes in half-points: add 4 units = +2 pt.
+ // Change only font references and font size properties, never clauses or layout XML.
+ return String(xml)
+  .replace(/<w:rFonts\b[^>]*\/>/g,
+    '<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:eastAsia="Times New Roman" w:cs="Times New Roman"/>')
+  .replace(/(<w:sz(?:Cs)?\b[^>]*\bw:val=")(\d+)(")/g,
+    (_,prefix,size,suffix)=>prefix+(Number(size)+4)+suffix);
+}
+function personalizedGreeting(xml,salutation){
+ if(!["Sir","Madam"].includes(salutation))throw Error("Choose Letter Salutation (Sir / Madam) in Staff Master first.");
+ let count=0;
+ const edited=xml.replace(/(<w:t\b[^>]*>)([\s\S]*?)(<\/w:t>)/g,(full,start,value,end)=>{
+  const next=value.replace(/Dear\s+Sir\s*\/\s*Madam,/gi,()=>{count++;return "Dear "+salutation+","});
+  return start+next+end;
+ });
+ if(!count)throw Error("Original Word greeting was not found. Check the approved template.");
+ return edited;
+}
 function incomplete(e){
  const list=[];
  if(!e.full_name)list.push("Name");
  if(!e.national_id)list.push("NIC");
  if(!e.address)list.push("Address");
  if(!e.joined_on)list.push("Joining Date");
+ if(!autoSalutation(e))list.push("Letter Salutation (Sir/Madam)");
  return list;
 }
 function xmlEscape(v){
@@ -95,7 +123,15 @@ async function generate(){
   const unfilled=requirements.filter(x=>!changed.has(x));
   if(unfilled.length)throw Error("Original Word placeholder missing: "+unfilled.join(", "));
   if(/\[AMOUNT TO BE COMPLETED\]/.test(xml))throw Error("Original template contains an unapproved salary amount. Complete the approved source letter first.");
-  zip.file("word/document.xml",xml);
+  zip.file("word/document.xml",restyleWordXml(personalizedGreeting(xml,autoSalutation(employee))));
+  // Preserve original DOCX layout/tables/images. Apply font and +2 pt to Word's
+  // actual named styles (including Normal) and to direct formatting.
+  const stylePart=zip.file("word/styles.xml");
+  if(!stylePart)throw Error("The approved Word file has no styles.xml.");
+  zip.file("word/styles.xml",restyleWordXml(await stylePart.async("string")));
+  for(const wordPart of Object.keys(zip.files).filter(n=>/^word\/(?:header|footer)\d+\.xml$/.test(n))){
+   zip.file(wordPart,restyleWordXml(await zip.file(wordPart).async("string")));
+  }
   const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6},
    mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
   const url=URL.createObjectURL(blob);
@@ -114,7 +150,7 @@ function choose(){
  const details=$("ap-v3-details");
  details.classList.toggle("hidden",!current);
  if(current)details.textContent=current.staff_code+" — "+current.full_name+" | "+current.designation+
- " | Original Word: "+(role||"NOT AVAILABLE")+(missing.length?" | Missing: "+missing.join(", "):"");
+ " | Original Word: "+(role||"NOT AVAILABLE")+" | Dear "+(autoSalutation(current)||"(select salutation)")+(missing.length?" | Missing: "+missing.join(", "):"");
  $("ap-v3-generate").disabled=!current||!role||missing.length>0;
  setStatus("ap-v3-status",!current?"Select employee.":!role?"No original Word letter for this designation.":missing.length?
  "Complete missing fields in Staff Master before download.":"Original "+role+" Word letter selected automatically.");
