@@ -108,7 +108,10 @@
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
       if(isHR()){
-       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("prime_payroll_scan_entries")
+        .select("id,source_id,period_month,source_page,source_number,source_name,employee_id,source_designation,source_joined_on,business_target,business_achieved,basic_pay,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,source_notes,review_required")
+        .order("source_id").limit(100));
        all.push(state.client.from("hr_leave_entitlements").select("id,employee_id,leave_year,leave_type,entitled_days,carried_days,notes").limit(2000));
        all.push(state.client.from("hr_letter_templates").select("id,template_name,designation_match,language,subject,body,status,version,updated_at").order("template_name").limit(300));
        all.push(state.client.from("hr_letter_drafts").select("id,template_id,employee_id,document_no,template_version,subject,rendered_body,status,created_at,issued_at").order("created_at",{ascending:false}).limit(600));
@@ -127,6 +130,7 @@
       state.letters=result[at++].data||[];
       state.fieldReports=isHR()?result[at++].data||[]:[];
       state.payroll=isHR()?result[at++].data||[]:[];
+      state.scanPayroll=isHR()?result[at++].data||[]:[];
       state.entitlements=isHR()?result[at++].data||[]:[];
       state.letterTemplates=isHR()?result[at++].data||[]:[];
       state.letterDrafts=isHR()?result[at++].data||[]:[];
@@ -888,6 +892,10 @@
       for(const key of ["proration_method","proration_joining_date","proration_payable_days","proration_month_days"])
         setFormValue(f,key,existing[key]??(key==="proration_method"?"none":""));
       setFormValue(f,"notes",existing.notes||"");
+      $("payroll-source-review-required").checked=!!existing.source_review_required;
+      $("payroll-source-hint").textContent=existing.source_reference?
+       "Imported source "+existing.source_reference+". Check each handwritten figure and statutory deduction before approval.":
+       "Existing monthly payroll draft. Review figures before approval.";
       f.querySelector('button[type="submit"]').disabled=existing.status!=="draft";
       f.querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
       $("payroll-proration-apply").disabled=existing.status!=="draft";
@@ -902,6 +910,8 @@
         setFormValue(f,reference,Number(value||0));
       }
       setFormValue(f,"notes","");
+      $("payroll-source-review-required").checked=false;
+      $("payroll-source-hint").textContent="New manual payroll draft.";
       $("payroll-proration-apply").disabled=false;
       payrollApplyMonthlyReferences(); // First-month auto-proposal; users may adjust.
     }
@@ -921,12 +931,42 @@
     const net=rows.reduce((n,x)=>n+Number(x.net_pay),0);
     $("payroll-totals").textContent="Records: "+rows.length+" · Gross: "+money(gross)+" · Net: "+money(net)+" · Approval is required before marking paid.";
     $("payroll-rows").innerHTML=rows.map(x=>{
-      let actions='<button class="btn tiny outline" data-payroll-print="'+esc(x.id)+'">Payslip Preview</button>';
+      let actions='<button class="btn tiny outline" data-payroll-print="'+esc(x.id)+'">A4 Payslip</button>';
+      if(x.status==="draft")actions+=' <button class="btn tiny primary" data-payroll-edit="'+esc(x.id)+'">Edit Saved Draft</button>';
+      if(x.source_review_required)actions+=' <span class="pill" title="HR verification required before approval">Verify Source</span>';
       if(isAdmin()&&x.status==="draft")actions+=' <button class="btn tiny" data-payroll-action="approved" data-payroll-id="'+esc(x.id)+'">Approve</button>';
       if(isAdmin()&&x.status==="approved")actions+=' <button class="btn tiny primary" data-payroll-action="paid" data-payroll-id="'+esc(x.id)+'">Mark Paid</button>';
       return '<tr><td>'+esc(employeeName(x.employee_id))+'</td><td>'+esc(x.period_month.slice(0,7))+'</td><td>'+esc(money(x.gross_pay))+'</td><td>'+esc(money(x.net_pay))+'</td><td>'+fmtStatus(x.status)+'</td><td>'+actions+'</td></tr>';
     }).join("")||empty(6,"No payroll records found.");
+    renderPayrollScan();
     payrollFormTotals();
+  }
+  function renderPayrollScan(){
+    if(!isHR())return;
+    const period=$("payroll-period-filter").value||"2026-10";
+    const rows=(state.scanPayroll||[]).filter(x=>x.period_month.slice(0,7)===period);
+    $("payroll-scan-rows").innerHTML=rows.map(x=>{
+      const linked=state.employees.find(e=>e.id===x.employee_id);
+      const record=state.payroll.find(p=>p.employee_id===x.employee_id&&p.period_month===x.period_month);
+      const label=linked?linked.staff_code+" · "+linked.full_name:"NOT FOUND — Add/verify employee first";
+      return '<tr><td>Page '+esc(x.source_page)+' / #'+esc(x.source_number)+'</td><td>'+esc(x.source_name)+'</td>'+
+        '<td>'+esc(label)+'</td><td>'+esc(x.business_target==null?"—":money(x.business_target))+'</td>'+
+        '<td>'+esc(x.business_achieved==null?"—":money(x.business_achieved))+'</td>'+
+        '<td>'+ (record?'<button class="btn tiny outline" data-payroll-edit="'+esc(record.id)+'">Edit / Verify</button>':
+        '<span class="muted">Unmatched · HR review</span>')+'</td></tr>';
+    }).join("")||empty(6,"No source entries for this month.");
+  }
+  function editPayrollDraft(id){
+    if(!isHR())return;
+    const r=state.payroll.find(x=>x.id===id);
+    if(!r)return toast("Payroll record not found. Refresh.",true);
+    if(r.status!=="draft")return toast("Only draft payroll records can be edited. Approved payroll is locked.",true);
+    setFormValue($("payroll-form"),"employee_id",r.employee_id);
+    setFormValue($("payroll-form"),"period",r.period_month.slice(0,7));
+    fillPayrollFromMaster();
+    $("payroll-form").scrollIntoView({behavior:"smooth",block:"start"});
+    $("payroll-form").querySelector("[name=basic_pay]")?.focus({preventScroll:true});
+    toast("Saved draft loaded for editing. Save again when finished.");
   }
   async function savePayroll(ev){
     ev.preventDefault();if(!isHR())return;
@@ -961,9 +1001,11 @@
     const gross=payrollSum(values,payrollEarningKeys);
     const deductions=payrollSum(values,payrollDeductionKeys);
     if(deductions>gross)return toast("Deductions cannot exceed gross earnings.",true);
-    const record={...values,employee_id,period_month:month+"-01",notes:formValue(f,"notes").trim()||null};
+    const record={...values,employee_id,period_month:month+"-01",
+       source_review_required:$("payroll-source-review-required").checked,
+       notes:formValue(f,"notes").trim()||null};
     const prev=state.payroll.find(x=>x.employee_id===employee_id&&x.period_month===record.period_month);
-    if(prev&&prev.status!=="draft")return toast("Approved payroll is locked.",true);
+    if(prev&&prev.status!=="draft")return toast("Approved payroll is locked. Drafts remain editable.",true);
     const q=prev?state.client.from("hr_payroll_entries").update(record).eq("id",prev.id).eq("status","draft"):
       state.client.from("hr_payroll_entries").insert({...record,status:"draft",created_by:state.user.id});
     const {error}=await q;
@@ -1583,6 +1625,7 @@
       b=e.target.closest("[data-staff-reset]");if(b)return staffManage("reset_password",b.dataset.staffReset);
       b=e.target.closest("[data-staff-toggle]");if(b)return staffManage("set_access",b.dataset.staffToggle,b.dataset.staffEnable==="true");
       b=e.target.closest("[data-staff-repair]");if(b)return staffManage("repair",b.dataset.staffRepair);
+      b=e.target.closest("[data-payroll-edit]");if(b)return editPayrollDraft(b.dataset.payrollEdit);
       b=e.target.closest("[data-payroll-action]");if(b)return decidePayroll(b.dataset.payrollId,b.dataset.payrollAction);
       b=e.target.closest("[data-payroll-print]");if(b)return printPayroll(b.dataset.payrollPrint);
       b=e.target.closest("[data-draft-action]");if(b)return decideLetterDraft(b.dataset.draftId,b.dataset.draftAction);
