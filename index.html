@@ -175,6 +175,9 @@
    <div class="payroll-section-heading">05 · Employer contribution (not deducted from net pay)</div>
    <div class="two"><label>Employer EPF (LKR)<input name="employer_epf" type="number" min="0" step=".01" value="0" required></label><label>Employer ETF (LKR)<input name="employer_etf" type="number" min="0" step=".01" value="0" required></label></div>
    <label>Internal Payroll Notes / Calculation Reference<textarea name="notes" maxlength="1000" rows="3" placeholder="Explain checked/corrected figures from the handwritten source."></textarea></label>
+   <label class="payroll-verify"><input id="payroll-source-review-required" name="source_review_required" type="checkbox"> <span>Scanned source needs HR verification before Admin approval. Keep checked until all handwriting, joining-date adjustments, EPF/ETF/APIT and amounts are confirmed.</span></label>
+   <p id="payroll-source-hint" class="fineprint">Manual entry. When editing a scanned draft, verify each line before clearing its review flag.</p>
+
    <div id="payroll-live-summary" class="payroll-live-summary" aria-live="polite">Gross: Rs. 0 · Deductions: Rs. 0 · Net: Rs. 0</div>
    <button class="btn primary" type="submit">Save / Update Draft Payroll</button>
   </form>
@@ -186,6 +189,11 @@
   <div class="toolbar"><label>Salary Month<input id="payroll-period-filter" type="month"></label><label>Status<select id="payroll-status-filter"><option value="">All statuses</option><option value="draft">Draft</option><option value="approved">Approved</option><option value="paid">Paid</option></select></label></div>
   <div id="payroll-totals" class="tip"></div>
   <div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Gross LKR</th><th>Net LKR</th><th>Status</th><th>Action</th></tr></thead><tbody id="payroll-rows"></tbody></table></div>
+  <div class="payroll-scan-register">
+    <h3>Handwritten Payroll Source · 13 Nov 2026</h3>
+    <p class="fineprint">October 2026 source reconciliation. The linked six staff have editable, unapproved drafts. Unmatched names are shown for HR review but excluded from payroll totals until their employee identities are confirmed.</p>
+    <div class="table-scroll"><table><thead><tr><th>Source</th><th>Name on Sheet</th><th>Staff Master</th><th>Target</th><th>Achievement</th><th>Review</th></tr></thead><tbody id="payroll-scan-rows"></tbody></table></div>
+  </div>
  </article>
 </section>
 <section id="view-recruitment" class="view hidden">

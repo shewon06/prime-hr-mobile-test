@@ -108,7 +108,10 @@
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
       if(isHR()){
-       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("prime_payroll_scan_entries")
+        .select("id,source_id,period_month,source_page,source_number,source_name,employee_id,source_designation,source_joined_on,business_target,business_achieved,basic_pay,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,source_notes,review_required")
+        .order("source_id").limit(100));
        all.push(state.client.from("hr_leave_entitlements").select("id,employee_id,leave_year,leave_type,entitled_days,carried_days,notes").limit(2000));
        all.push(state.client.from("hr_letter_templates").select("id,template_name,designation_match,language,subject,body,status,version,updated_at").order("template_name").limit(300));
        all.push(state.client.from("hr_letter_drafts").select("id,template_id,employee_id,document_no,template_version,subject,rendered_body,status,created_at,issued_at").order("created_at",{ascending:false}).limit(600));
@@ -127,6 +130,7 @@
       state.letters=result[at++].data||[];
       state.fieldReports=isHR()?result[at++].data||[]:[];
       state.payroll=isHR()?result[at++].data||[]:[];
+      state.scanPayroll=isHR()?result[at++].data||[]:[];
       state.entitlements=isHR()?result[at++].data||[]:[];
       state.letterTemplates=isHR()?result[at++].data||[]:[];
       state.letterDrafts=isHR()?result[at++].data||[]:[];
@@ -888,6 +892,10 @@
       for(const key of ["proration_method","proration_joining_date","proration_payable_days","proration_month_days"])
         setFormValue(f,key,existing[key]??(key==="proration_method"?"none":""));
       setFormValue(f,"notes",existing.notes||"");
+      $("payroll-source-review-required").checked=!!existing.source_review_required;
+      $("payroll-source-hint").textContent=existing.source_reference?
+       "Imported source "+existing.source_reference+". Check each handwritten figure and statutory deduction before approval.":
+       "Existing monthly payroll draft. Review figures before approval.";
       f.querySelector('button[type="submit"]').disabled=existing.status!=="draft";
       f.querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
       $("payroll-proration-apply").disabled=existing.status!=="draft";
@@ -902,6 +910,8 @@
         setFormValue(f,reference,Number(value||0));
       }
       setFormValue(f,"notes","");
+      $("payroll-source-review-required").checked=false;
+      $("payroll-source-hint").textContent="New manual payroll draft.";
       $("payroll-proration-apply").disabled=false;
       payrollApplyMonthlyReferences(); // First-month auto-proposal; users may adjust.
     }
@@ -921,12 +931,42 @@
     const net=rows.reduce((n,x)=>n+Number(x.net_pay),0);
     $("payroll-totals").textContent="Records: "+rows.length+" · Gross: "+money(gross)+" · Net: "+money(net)+" · Approval is required before marking paid.";
     $("payroll-rows").innerHTML=rows.map(x=>{
-      let actions='<button class="btn tiny outline" data-payroll-print="'+esc(x.id)+'">Payslip Preview</button>';
+      let actions='<button class="btn tiny outline" data-payroll-print="'+esc(x.id)+'">A4 Payslip</button>';
+      if(x.status==="draft")actions+=' <button class="btn tiny primary" data-payroll-edit="'+esc(x.id)+'">Edit Saved Draft</button>';
+      if(x.source_review_required)actions+=' <span class="pill" title="HR verification required before approval">Verify Source</span>';
       if(isAdmin()&&x.status==="draft")actions+=' <button class="btn tiny" data-payroll-action="approved" data-payroll-id="'+esc(x.id)+'">Approve</button>';
       if(isAdmin()&&x.status==="approved")actions+=' <button class="btn tiny primary" data-payroll-action="paid" data-payroll-id="'+esc(x.id)+'">Mark Paid</button>';
       return '<tr><td>'+esc(employeeName(x.employee_id))+'</td><td>'+esc(x.period_month.slice(0,7))+'</td><td>'+esc(money(x.gross_pay))+'</td><td>'+esc(money(x.net_pay))+'</td><td>'+fmtStatus(x.status)+'</td><td>'+actions+'</td></tr>';
     }).join("")||empty(6,"No payroll records found.");
+    renderPayrollScan();
     payrollFormTotals();
+  }
+  function renderPayrollScan(){
+    if(!isHR())return;
+    const period=$("payroll-period-filter").value||"2026-10";
+    const rows=(state.scanPayroll||[]).filter(x=>x.period_month.slice(0,7)===period);
+    $("payroll-scan-rows").innerHTML=rows.map(x=>{
+      const linked=state.employees.find(e=>e.id===x.employee_id);
+      const record=state.payroll.find(p=>p.employee_id===x.employee_id&&p.period_month===x.period_month);
+      const label=linked?linked.staff_code+" · "+linked.full_name:"NOT FOUND — Add/verify employee first";
+      return '<tr><td>Page '+esc(x.source_page)+' / #'+esc(x.source_number)+'</td><td>'+esc(x.source_name)+'</td>'+
+        '<td>'+esc(label)+'</td><td>'+esc(x.business_target==null?"—":money(x.business_target))+'</td>'+
+        '<td>'+esc(x.business_achieved==null?"—":money(x.business_achieved))+'</td>'+
+        '<td>'+ (record?'<button class="btn tiny outline" data-payroll-edit="'+esc(record.id)+'">Edit / Verify</button>':
+        '<span class="muted">Unmatched · HR review</span>')+'</td></tr>';
+    }).join("")||empty(6,"No source entries for this month.");
+  }
+  function editPayrollDraft(id){
+    if(!isHR())return;
+    const r=state.payroll.find(x=>x.id===id);
+    if(!r)return toast("Payroll record not found. Refresh.",true);
+    if(r.status!=="draft")return toast("Only draft payroll records can be edited. Approved payroll is locked.",true);
+    setFormValue($("payroll-form"),"employee_id",r.employee_id);
+    setFormValue($("payroll-form"),"period",r.period_month.slice(0,7));
+    fillPayrollFromMaster();
+    $("payroll-form").scrollIntoView({behavior:"smooth",block:"start"});
+    $("payroll-form").querySelector("[name=basic_pay]")?.focus({preventScroll:true});
+    toast("Saved draft loaded for editing. Save again when finished.");
   }
   async function savePayroll(ev){
     ev.preventDefault();if(!isHR())return;
@@ -961,9 +1001,11 @@
     const gross=payrollSum(values,payrollEarningKeys);
     const deductions=payrollSum(values,payrollDeductionKeys);
     if(deductions>gross)return toast("Deductions cannot exceed gross earnings.",true);
-    const record={...values,employee_id,period_month:month+"-01",notes:formValue(f,"notes").trim()||null};
+    const record={...values,employee_id,period_month:month+"-01",
+       source_review_required:$("payroll-source-review-required").checked,
+       notes:formValue(f,"notes").trim()||null};
     const prev=state.payroll.find(x=>x.employee_id===employee_id&&x.period_month===record.period_month);
-    if(prev&&prev.status!=="draft")return toast("Approved payroll is locked.",true);
+    if(prev&&prev.status!=="draft")return toast("Approved payroll is locked. Drafts remain editable.",true);
     const q=prev?state.client.from("hr_payroll_entries").update(record).eq("id",prev.id).eq("status","draft"):
       state.client.from("hr_payroll_entries").insert({...record,status:"draft",created_by:state.user.id});
     const {error}=await q;
@@ -1005,7 +1047,15 @@
       '.footer{border-top:1px solid #dce5de;margin-top:22px;padding-top:10px;font-size:10px;color:#69776d}.sign{display:flex;justify-content:space-between;gap:25px;margin-top:40px}.sign div{border-top:1px solid #99a99d;width:45%;padding-top:6px}'+
       '.toolbar{margin-bottom:20px}.toolbar button{background:#17543b;color:white;border:0;padding:10px 15px;border-radius:8px;cursor:pointer}.warning{color:#8d602a;font-size:11px;font-weight:700}'+
       '.sheet h1{font-size:20px}.sheet table{font-size:8px}.sheet th,.sheet td{padding:5px 4px}.sheet .num{white-space:nowrap}.sheet .name{max-width:130px;min-width:85px;overflow-wrap:anywhere}.sheet .meta{grid-template-columns:repeat(3,1fr)}'+
-      '@media print{.toolbar{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet tr{break-inside:avoid}thead{display:table-header-group}}'+
+      '.sheet .sheet-page{break-after:page;page-break-after:always;padding:0 0 4mm}.sheet .sheet-page:last-child{break-after:auto;page-break-after:auto}'+
+      '.sheet-page header{margin-bottom:11px}.sheet-page header .brand{font-size:25px}.sheet-page .print-head{text-align:right}.sheet-page .print-head h1{font-size:21px}'+
+      '.print-stats{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:10px;margin:12px 0}.print-stats div{background:#f2f7f2;border:1px solid #d8e7dc;padding:12px;border-radius:8px}'+
+      '.print-stats small{display:block;font-size:9px;letter-spacing:.07em;color:#6b8371}.print-stats strong{display:block;font-size:17px;color:#1a5e40;margin-top:5px}'+
+      '.sheet-page .a4-table{width:100%;table-layout:fixed;font-size:9px}.sheet-page .a4-table th,.sheet-page .a4-table td{padding:7px 5px;overflow-wrap:anywhere;line-height:1.4}'+
+      '.sheet-page .a4-table td small{display:block;font-size:8px;color:#718575;margin-top:4px}.sheet-page .a4-table th{background:#eaf3ed;color:#255e42}'+
+      '.sheet-page .a4-table td:first-child{font-weight:800}.sheet-page .a4-table th:nth-child(2),.sheet-page .a4-table td:nth-child(2){text-align:left}'+
+      '.print-note{margin-top:16px;color:#6d7e73;font-size:10px;line-height:1.6}.sheet-page .footer{margin-top:16px;font-size:9px}'+
+      '@media print{.toolbar{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet tr{break-inside:avoid}thead{display:table-header-group}.sheet-page{break-inside:avoid-page}}'+
       '</style>';
     const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><title>'+esc(title)+'</title>'+style+'</head><body>'+
       '<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button> <span class="muted">Review all amounts before issuing.</span></div>'+body+'</body></html>';
@@ -1074,83 +1124,99 @@
   function printMonthlyPaysheet(){
     if(!isHR())return;
     const period=$("payroll-period-filter").value||$("payroll-month").value;
-    if(!/^\d{4}-\d{2}$/.test(period))return toast("Select a salary month first.",true);
+    if(!/^\d{4}-\d{2}$/.test(period))return toast("Select a salary month.",true);
     const status=$("payroll-status-filter").value;
     const rows=state.payroll.filter(x=>x.period_month.startsWith(period)&&(!status||x.status===status))
-      .sort((a,b)=>(state.employees.find(e=>e.id===a.employee_id)?.staff_code||"")
-        .localeCompare(state.employees.find(e=>e.id===b.employee_id)?.staff_code||""));
-    if(!rows.length)return toast("No payroll records for "+period+". Save draft payroll first.",true);
-    const more=x=>payrollSum(x,["allowance_pay","overtime_pay","other_earnings"]);
-    const deduct=x=>payrollSum(x,payrollDeductionKeys);
-    const sum=fn=>rows.reduce((t,x)=>t+fn(x),0);
-    const num=n=>esc(money(n));
-    const percent=x=>{const p=payrollAchievementPercent(x);return p===null?"—":p.toFixed(1)+"%"};
-    const heading='<header><div class="brand">PRIME<span> HR</span><small>AGRI BUSINESS & PLANTATIONS (PVT) LTD</small></div>'+
-      '<div><div class="eyebrow">Payroll Control Register</div><h1>Monthly Consolidated Paysheet</h1><div class="muted">'+esc(formatPayrollPeriod(period))+'</div></div></header>';
-    const prelim=rows.some(r=>r.status==="draft");
-    const info='<div class="meta">'+
-      '<div><span class="eyebrow">Salary Month</span><strong>'+esc(formatPayrollPeriod(period))+'</strong></div>'+
-      '<div><span class="eyebrow">Employee Records</span><strong>'+rows.length+'</strong></div>'+
-      '<div><span class="eyebrow">Total Net Pay</span><strong>'+num(sum(x=>Number(x.net_pay)))+'</strong></div></div>'+
-      '<p class="'+(prelim?'warning':'muted')+'">'+
-      (prelim?'DRAFT/UNAPPROVED RECORDS INCLUDED — NOT PAYMENT INSTRUCTIONS.':'ADMIN PAYROLL REGISTER — Verify external payments independently.')+
-      '</p>';
-    const labels=["Code","Employee / Branch","Target","Achieved","%","Full B/S","Paid B/S","B/A","T/A","V/A","ORC","Incent.","Other + OT","Gross","Deductions","Net","Status"];
-    const header='<thead><tr>'+labels.map((s,i)=>'<th'+(i>=2&&i<=15?' class="num"':'')+'>'+esc(s)+'</th>').join("")+'</tr></thead>';
-    const lines=rows.map(x=>{
-      const e=state.employees.find(e=>e.id===x.employee_id);
-      const cells=[
-        e?.staff_code||"—",'<b>'+esc(e?.full_name||"Employee")+'</b><br><span class="muted">'+esc(branchName(e?.branch_id))+'</span>'+((x.proration_payable_days&&x.proration_month_days&&x.proration_method!=="none")?'<br><span class="muted">Joined '+esc(x.proration_joining_date||e?.joined_on||"—")+' · '+esc(x.proration_payable_days)+'/'+esc(x.proration_month_days)+' days '+esc(x.proration_method)+'</span>':''),
-        x.business_target==null?"—":num(x.business_target),
-        x.business_achieved==null?"—":num(x.business_achieved),
-        esc(percent(x)),x.full_monthly_basic==null?"—":num(x.full_monthly_basic),num(x.basic_pay),num(x.ba_pay),num(x.travel_allowance_pay),
-        num(x.vehicle_allowance_pay),num(x.orc_pay),num(x.incentive_pay),
-        num(more(x)),num(x.gross_pay),num(deduct(x)),num(x.net_pay),esc(x.status.toUpperCase())
-      ];
-      return '<tr>'+cells.map((value,i)=>'<td class="'+(i===1?'name':i>=2&&i<=15?'num':'')+'">'+value+'</td>').join("")+'</tr>';
-    }).join("");
-    const totalCells=[
-      "TOTAL",rows.length+" staff",
-      num(sum(x=>Number(x.business_target||0))),num(sum(x=>Number(x.business_achieved||0))),
-      "—",num(sum(x=>Number(x.full_monthly_basic||0))),num(sum(x=>Number(x.basic_pay))),num(sum(x=>Number(x.ba_pay))),
-      num(sum(x=>Number(x.travel_allowance_pay))),num(sum(x=>Number(x.vehicle_allowance_pay))),
-      num(sum(x=>Number(x.orc_pay))),num(sum(x=>Number(x.incentive_pay))),num(sum(more)),
-      num(sum(x=>Number(x.gross_pay))),num(sum(deduct)),num(sum(x=>Number(x.net_pay))),"—"
-    ];
-    const footer='<tfoot><tr>'+totalCells.map((c,i)=>'<td'+(i>=2&&i<=15?' class="num"':'')+'>'+c+'</td>').join("")+'</tr></tfoot>';
-    const extraColumns=["Code","Employee EPF","APIT / Tax","Other Deductions","Total Deductions","Employer EPF","Employer ETF","Employer Total"];
-    const extraRows=rows.map(x=>{
-      const e=state.employees.find(e=>e.id===x.employee_id);
-      const cells=[
-        esc(e?.staff_code||"—"),num(x.employee_epf),num(x.income_tax),num(x.other_deductions),
-        num(deduct(x)),num(x.employer_epf),num(x.employer_etf),
-        num(Number(x.employer_epf)+Number(x.employer_etf))
-      ];
-      return '<tr>'+cells.map((v,i)=>'<td'+(i?' class="num"':'')+'>'+v+'</td>').join("")+'</tr>';
-    }).join("");
-    const extraTotals=["TOTAL",num(sum(x=>Number(x.employee_epf))),num(sum(x=>Number(x.income_tax))),
-      num(sum(x=>Number(x.other_deductions))),num(sum(deduct)),
-      num(sum(x=>Number(x.employer_epf))),num(sum(x=>Number(x.employer_etf))),
-      num(sum(x=>Number(x.employer_epf)+Number(x.employer_etf)))];
-    const extra='<h2>STATUTORY DEDUCTIONS &amp; EMPLOYER CONTRIBUTIONS</h2><table><thead><tr>'+
-      extraColumns.map((label,i)=>'<th'+(i?' class="num"':'')+'>'+esc(label)+'</th>').join("")+
-      '</tr></thead><tbody>'+extraRows+'</tbody><tfoot><tr>'+extraTotals.map((v,i)=>'<td'+(i?' class="num"':'')+'>'+v+'</td>').join("")+'</tr></tfoot></table>';
-    const proratedRows=rows.filter(x=>x.proration_method!=="none"&&x.proration_joining_date);
-    const proratedDetail=proratedRows.length?'<h2>FIRST-MONTH SALARY RECONCILIATION</h2><table><thead><tr>'+
-      ["Staff","Joining Date","Days Paid / Month","Full Monthly B/S","Payable B/S","Full B/A","Full T/A","Full V/A","Method"].map(v=>'<th>'+esc(v)+'</th>').join("")+
-      '</tr></thead><tbody>'+proratedRows.map(x=>{
-        const e=state.employees.find(e=>e.id===x.employee_id);
-        const cells=[e?.staff_code||"—",x.proration_joining_date,
-          String(x.proration_payable_days||"—")+"/"+String(x.proration_month_days||"—"),
-          money(x.full_monthly_basic),money(x.basic_pay),money(x.full_monthly_ba),
-          money(x.full_monthly_ta),money(x.full_monthly_va),x.proration_method];
-        return '<tr>'+cells.map(v=>'<td>'+esc(v)+'</td>').join("")+'</tr>';
-      }).join("")+'</tbody></table>':'';
-    const body='<div class="sheet">'+heading+info+'<table>'+header+'<tbody>'+lines+'</tbody>'+footer+'</table>'+
-      extra+proratedDetail+
-      '<div class="footer">Other + OT = Other Allowances + Overtime + Other Earnings. Earnings and commission categories require verified HR inputs. Target / Achievement are performance data, not automatically payable commission. EPF, ETF and APIT amounts are entered/verified manually. Calendar-day pro-rata is a suggested first-month calculation; HR-approved figures override it. No payment transfer initiated.</div>'+
-      '<div class="sign"><div>Prepared & verified by HR</div><div>Approved by Management</div></div></div>';
-    openPayrollPrint("PRIME Monthly Paysheet "+period,body,true);
+      .sort((a,b)=>(state.employees.find(e=>e.id===a.employee_id)?.staff_code||"").localeCompare(state.employees.find(e=>e.id===b.employee_id)?.staff_code||""));
+    const scans=(state.scanPayroll||[]).filter(x=>x.period_month.startsWith(period));
+    if(!rows.length&&!scans.length)return toast("No payroll records for "+period+".",true);
+    const emp=x=>state.employees.find(e=>e.id===x.employee_id);
+    const moneySafe=n=>esc(money(Number(n||0)));
+    const rawMoney=n=>n==null?"—":moneySafe(n);
+    const sum=(fn)=>rows.reduce((total,x)=>total+Number(fn(x)||0),0);
+    const deductions=x=>payrollSum(x,payrollDeductionKeys);
+    const rest=x=>payrollSum(x,["allowance_pay","overtime_pay","other_earnings","incentive_pay"]);
+    const preview=rows.some(x=>x.source_review_required)||rows.some(x=>x.status==="draft");
+    const tag=preview?"DRAFT / SOURCE VERIFICATION REQUIRED":"HR PAYROLL REGISTER";
+    const page=(index,title,description,inner)=>'<section class="sheet-page">'+
+      '<header><div class="brand">PRIME <span>HR</span><small>AGRI BUSINESS &amp; PLANTATIONS (PVT) LTD</small></div>'+
+      '<div class="print-head"><div class="eyebrow">A4 PAYROLL · '+esc(formatPayrollPeriod(period))+'</div>'+
+      '<h1>'+esc(title)+'</h1><div class="eyebrow">'+esc(description)+'</div></div></header>'+
+      '<p class="warning">'+esc(tag)+' — printed figures are not proof of a bank transfer or statutory remittance.</p>'+
+      inner+'<div class="footer">CONFIDENTIAL · Page '+index+' · PRIME HR NEXT LEVEL · HR must verify all manual source figures, employee identities and statutory deductions before issuing.</div></section>';
+    const table=(headers,body,totals)=>'<table class="a4-table"><thead><tr>'+
+      headers.map((h,i)=>'<th'+(i?' class="num"':'')+'>'+esc(h)+'</th>').join("")+
+      '</tr></thead><tbody>'+body.map(cells=>'<tr>'+cells.map((cell,i)=>
+      '<td'+(i?' class="num"':'')+'>'+cell+'</td>').join("")+'</tr>').join("")+
+      '</tbody>'+(totals?'<tfoot><tr>'+totals.map((cell,i)=>'<td'+(i?' class="num"':'')+'>'+cell+'</td>').join("")+'</tr></tfoot>':'')+'</table>';
+    const pct=x=>{const p=payrollAchievementPercent(x);return p===null?"—":p.toFixed(1)+"%"};
+    // Page 1: readable summary. Full B/S and actually payable B/S are deliberately distinct.
+    const summary=rows.map(x=>{
+      const e=emp(x);
+      const stateLabel=x.source_review_required?"REVIEW":String(x.status).toUpperCase();
+      return [esc(e?.staff_code||"—"),
+        esc(e?.full_name||"Employee")+'<small>'+esc(branchName(e?.branch_id))+'</small>',
+        esc(x.proration_joining_date||e?.joined_on||"—"),
+        rawMoney(x.full_monthly_basic),
+        moneySafe(x.basic_pay),
+        moneySafe(x.gross_pay),
+        moneySafe(deductions(x)),
+        '<b>'+moneySafe(x.net_pay)+'</b>',
+        esc(stateLabel)];
+    });
+    const header1=["Code","Employee / Branch","Joined","Full B/S","Payable B/S","Gross","Deductions","Net Pay","Status"];
+    // For summary only, left-align employee name, rest numerical/short.
+    const summaryTotals=["TOTAL",rows.length+" linked staff","—","—",
+      moneySafe(sum(x=>x.basic_pay)),moneySafe(sum(x=>x.gross_pay)),moneySafe(sum(deductions)),
+      moneySafe(sum(x=>x.net_pay)),"—"];
+    const stats='<div class="print-stats"><div><small>PAYROLL MONTH</small><strong>'+esc(formatPayrollPeriod(period))+'</strong></div>'+
+      '<div><small>LINKED EMPLOYEES</small><strong>'+rows.length+'</strong></div>'+
+      '<div><small>DRAFT NET TOTAL — UNVERIFIED</small><strong>'+moneySafe(sum(x=>x.net_pay))+'</strong></div></div>';
+    const p1=page(1,"Monthly Payroll · Summary","Employee-wise salary and take-home amounts",
+      stats+table(header1,summary,summaryTotals)+
+      '<p class="print-note">Net totals shown above are provisional while source review is pending. Employees without a verified Staff Master link are excluded from these totals.</p>');
+    // Page 2: all earnings columns split away from summary so A4 remains legible.
+    const earn=rows.map(x=>[esc(emp(x)?.staff_code||"—"),moneySafe(x.basic_pay),moneySafe(x.ba_pay),
+      moneySafe(x.travel_allowance_pay),moneySafe(x.vehicle_allowance_pay),moneySafe(x.orc_pay),
+      moneySafe(x.incentive_pay),moneySafe(x.allowance_pay),moneySafe(x.overtime_pay),
+      moneySafe(x.other_earnings),'<b>'+moneySafe(x.gross_pay)+'</b>']);
+    const earnTotals=["TOTAL",moneySafe(sum(x=>x.basic_pay)),moneySafe(sum(x=>x.ba_pay)),
+      moneySafe(sum(x=>x.travel_allowance_pay)),moneySafe(sum(x=>x.vehicle_allowance_pay)),
+      moneySafe(sum(x=>x.orc_pay)),moneySafe(sum(x=>x.incentive_pay)),moneySafe(sum(x=>x.allowance_pay)),
+      moneySafe(sum(x=>x.overtime_pay)),moneySafe(sum(x=>x.other_earnings)),
+      moneySafe(sum(x=>x.gross_pay))];
+    const p2=page(2,"Monthly Payroll · Earnings","B/S · B/A · T/A · V/A · ORC · incentive · other pay",
+      table(["Code","B/S","B/A","T/A","V/A","ORC","Incent.","Other All.","OT","Other","Gross"],earn,earnTotals)+
+      '<p class="print-note">Amounts were entered as readable values from the handwritten source. Blank source entries must be verified: displayed zero does not confirm that a component is inapplicable.</p>');
+    // Page 3: performance and statutory detail.
+    const deductionsTable=rows.map(x=>[esc(emp(x)?.staff_code||"—"),
+      rawMoney(x.business_target),rawMoney(x.business_achieved),esc(pct(x)),
+      moneySafe(x.employee_epf),moneySafe(x.income_tax),moneySafe(x.other_deductions),
+      moneySafe(x.employer_epf),moneySafe(x.employer_etf)]);
+    const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",
+      moneySafe(sum(x=>x.employee_epf)),moneySafe(sum(x=>x.income_tax)),
+      moneySafe(sum(x=>x.other_deductions)),moneySafe(sum(x=>x.employer_epf)),moneySafe(sum(x=>x.employer_etf))];
+    const p3=page(3,"Performance & Statutory Items","Business target, achievement and payroll deductions",
+      table(["Code","Target","Achieved","%","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
+      '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
+    // Page 4: reconcile all eight scan entries, including two unmatched people.
+    let p4="";
+    if(scans.length){
+      const stageRows=scans.map(x=>{
+        const e=emp(x);
+        return [esc("P"+x.source_page+" #"+x.source_number),
+          esc(x.source_name)+'<small>'+esc(x.source_designation||"")+'</small>',
+          e?esc(e.staff_code):'<b>NOT MATCHED</b>',
+          rawMoney(x.business_target),rawMoney(x.business_achieved),
+          rawMoney(x.basic_pay),rawMoney(x.travel_allowance_pay),rawMoney(x.orc_pay),
+          e?"HR CHECK":"ADD / VERIFY"];
+      });
+      p4=page(4,"Handwritten Source Reconciliation","All source names shown; unmatched entries are NOT in payroll totals",
+        table(["Scan","Name on Source","Staff","Target","Achieved","B/S","T/A","ORC","Action"],stageRows,null)+
+        '<p class="print-note">Source: CamScanner, 13 November 2026, pages 1–2, October 2026 salary working. Handwritten corrections and role/date mismatches must be verified. Any unlinked person must first be verified in Employee Master; no employee identities are guessed.</p>');
+    }
+    const html='<div class="sheet a4-landscape">'+p1+p2+p3+p4+'</div>';
+    openPayrollPrint("PRIME A4 Monthly Paysheet "+period,html,true);
   }
   function exportPayroll(){
     if(!isHR())return;
@@ -1583,6 +1649,7 @@
       b=e.target.closest("[data-staff-reset]");if(b)return staffManage("reset_password",b.dataset.staffReset);
       b=e.target.closest("[data-staff-toggle]");if(b)return staffManage("set_access",b.dataset.staffToggle,b.dataset.staffEnable==="true");
       b=e.target.closest("[data-staff-repair]");if(b)return staffManage("repair",b.dataset.staffRepair);
+      b=e.target.closest("[data-payroll-edit]");if(b)return editPayrollDraft(b.dataset.payrollEdit);
       b=e.target.closest("[data-payroll-action]");if(b)return decidePayroll(b.dataset.payrollId,b.dataset.payrollAction);
       b=e.target.closest("[data-payroll-print]");if(b)return printPayroll(b.dataset.payrollPrint);
       b=e.target.closest("[data-draft-action]");if(b)return decideLetterDraft(b.dataset.draftId,b.dataset.draftAction);
