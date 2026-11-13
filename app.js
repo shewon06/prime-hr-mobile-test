@@ -108,7 +108,7 @@
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
       if(isHR()){
-       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,gross_pay,net_pay,status,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,gross_pay,net_pay,status,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
        all.push(state.client.from("hr_leave_entitlements").select("id,employee_id,leave_year,leave_type,entitled_days,carried_days,notes").limit(2000));
        all.push(state.client.from("hr_letter_templates").select("id,template_name,designation_match,language,subject,body,status,version,updated_at").order("template_name").limit(300));
        all.push(state.client.from("hr_letter_drafts").select("id,template_id,employee_id,document_no,template_version,subject,rendered_body,status,created_at,issued_at").order("created_at",{ascending:false}).limit(600));
@@ -780,13 +780,32 @@
       el.dataset.staffList=keys;
     }
   }
-  const payrollKeys=["basic_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
+  const payrollKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
+  const payrollEarningKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings"];
+  const payrollDeductionKeys=["employee_epf","income_tax","other_deductions"];
+  const payrollSum=(record,keys)=>keys.reduce((sum,key)=>sum+Number(record?.[key]||0),0);
+  function payrollAchievementPercent(record){
+    const target=record?.business_target,actual=record?.business_achieved;
+    return target===null||target===""||target===undefined||actual===null||actual===""||actual===undefined||
+      Number(target)<=0?null:Math.round(Number(actual)/Number(target)*1000)/10;
+  }
   function payrollFormTotals(){
     const f=$("payroll-form");
-    const num=n=>Number(formValue(f,n)||0);
-    const gross=num("basic_pay")+num("allowance_pay")+num("overtime_pay")+num("other_earnings");
-    const net=gross-num("employee_epf")-num("income_tax")-num("other_deductions");
-    $("payroll-live-summary").textContent="Gross: "+money(gross)+" · Net: "+money(net)+" · Employer EPF/ETF costs: "+money(num("employer_epf")+num("employer_etf"));
+    const values=Object.fromEntries(payrollKeys.map(k=>[k,Number(formValue(f,k)||0)]));
+    const gross=payrollSum(values,payrollEarningKeys),deductions=payrollSum(values,payrollDeductionKeys);
+    const net=gross-deductions,company=Number(values.employer_epf)+Number(values.employer_etf);
+    const pct=payrollAchievementPercent({
+      business_target:formValue(f,"business_target"),
+      business_achieved:formValue(f,"business_achieved")
+    });
+    $("payroll-achievement-percentage").textContent=pct===null?"—":pct.toFixed(1)+"%";
+    $("payroll-achievement-context").textContent=pct===null?"Enter target and achievement to calculate %.":
+      "Target: "+money(formValue(f,"business_target"))+" · Achieved: "+money(formValue(f,"business_achieved"));
+    $("payroll-live-summary").innerHTML=
+      '<div><small>GROSS EARNINGS</small><strong>'+esc(money(gross))+'</strong></div>'+
+      '<div><small>DEDUCTIONS</small><strong>'+esc(money(deductions))+'</strong></div>'+
+      '<div class="net"><small>NET PAY</small><strong>'+esc(money(net))+'</strong></div>'+
+      '<p>Employer EPF / ETF company cost: '+esc(money(company))+(net<0?' · Check deductions':'')+'</p>';
   }
   function fillPayrollFromMaster(){
     const f=$("payroll-form");
@@ -795,14 +814,16 @@
     const month=formValue(f,"period");
     const existing=state.payroll.find(x=>x.employee_id===e.id&&x.period_month.slice(0,7)===month);
     if(existing){
-      for(const key of payrollKeys)setFormValue(f,key,Number(existing[key]));
+      for(const key of payrollKeys)setFormValue(f,key,Number(existing[key]??0));
+      for(const key of ["business_target","business_achieved"])setFormValue(f,key,existing[key]??"");
       setFormValue(f,"notes",existing.notes||"");
       $("payroll-form").querySelector('button[type="submit"]').disabled=existing.status!=="draft";
       $("payroll-form").querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
     }else{
       f.querySelector('button[type="submit"]').disabled=false;
       f.querySelector('button[type="submit"]').textContent="Save / Update Draft Payroll";
-      payrollKeys.forEach(k=>setFormValue(f,k,k==="basic_pay"?Number(e.basic_salary||0):k==="allowance_pay"?Number(e.vehicle_allowance||0):0));
+      payrollKeys.forEach(k=>setFormValue(f,k,k==="basic_pay"?Number(e.basic_salary||0):k==="vehicle_allowance_pay"?Number(e.vehicle_allowance||0):0));
+      setFormValue(f,"business_target","");setFormValue(f,"business_achieved","");
       setFormValue(f,"notes","");
     }
     payrollFormTotals();
@@ -837,8 +858,14 @@
       if(raw===""||!Number.isFinite(Number(raw))||Number(raw)<0)return toast("Check non-negative amount: "+key,true);
       values[key]=Math.round(Number(raw)*100)/100;
     }
-    const gross=values.basic_pay+values.allowance_pay+values.overtime_pay+values.other_earnings;
-    const deductions=values.employee_epf+values.income_tax+values.other_deductions;
+    for(const key of ["business_target","business_achieved"]){
+      const raw=formValue(f,key);
+      if(raw===""){values[key]=null;continue}
+      if(!Number.isFinite(Number(raw))||Number(raw)<0)return toast("Check non-negative amount: "+key,true);
+      values[key]=Math.round(Number(raw)*100)/100;
+    }
+    const gross=payrollSum(values,payrollEarningKeys);
+    const deductions=payrollSum(values,payrollDeductionKeys);
     if(deductions>gross)return toast("Deductions cannot exceed gross earnings.",true);
     const record={...values,employee_id,period_month:month+"-01",notes:formValue(f,"notes").trim()||null};
     const prev=state.payroll.find(x=>x.employee_id===employee_id&&x.period_month===record.period_month);
