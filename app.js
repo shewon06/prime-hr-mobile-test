@@ -108,7 +108,7 @@
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
       if(isHR()){
-       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,fuel_allowance_litres,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
        all.push(state.client.from("prime_payroll_scan_entries")
         .select("id,source_id,period_month,source_page,source_number,source_name,employee_id,source_designation,source_joined_on,business_target,business_achieved,basic_pay,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,source_notes,review_required")
         .order("source_id").limit(100));
@@ -784,7 +784,7 @@
       el.dataset.staffList=keys;
     }
   }
-  const payrollKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
+  const payrollKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","fuel_allowance_litres","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
   const payrollEarningKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings"];
   const payrollDeductionKeys=["employee_epf","income_tax","other_deductions"];
   const payrollSum=(record,keys)=>keys.reduce((sum,key)=>sum+Number(record?.[key]||0),0);
@@ -1094,6 +1094,10 @@
       '<div><span class="eyebrow">Achievement</span><strong>'+esc(x.business_achieved==null?"Not entered":money(x.business_achieved))+'</strong></div>'+
       '<div><span class="eyebrow">Achievement %</span><strong>'+esc(p)+'</strong></div>'+
       '</div>'+(percent===null?'':'<div class="bar"><i style="width:'+Math.min(100,Math.max(0,percent))+'%"></i></div>');
+    const fuelSection='<h2>IN-KIND ALLOWANCE · NON-CASH</h2><div class="meta">'+
+      '<div><span class="eyebrow">Fuel Allowance</span><strong>'+
+      esc(Number(x.fuel_allowance_litres||0).toLocaleString("en-US",{maximumFractionDigits:2})+" L")+
+      '</strong></div><div><span class="eyebrow">Payroll treatment</span><strong>Litres only · Excluded from Gross / Net Pay</strong></div></div>';
     const gross=Number(x.gross_pay),deductions=payrollSum(x,payrollDeductionKeys);
     const hasProration=Number(x.proration_payable_days)>0&&Number(x.proration_month_days)>0&&
       x.proration_joining_date&&x.proration_method!=="none";
@@ -1114,7 +1118,7 @@
       '<div class="meta">'+meta.map(([a,b])=>'<div><span class="eyebrow">'+esc(a)+'</span><strong>'+esc(b)+'</strong></div>').join("")+'</div>'+
       '<div class="hero"><div><small>NET PAY FOR PERIOD</small><strong>'+esc(money(x.net_pay))+'</strong></div><div>'+esc(formatPayrollPeriod(x.period_month))+'</div></div>'+
       (x.status!=="paid"?'<p class="warning">'+esc(statusNote)+'</p>':'<p class="muted">'+esc(statusNote)+'</p>')+
-      performance+prorated+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
+      performance+prorated+fuelSection+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
       '<div><h2>DEDUCTIONS</h2>'+table(deduct,"Total Deductions",deductions)+
       '<h2>EMPLOYER CONTRIBUTIONS (NOT DEDUCTED)</h2>'+table([["Employer EPF",x.employer_epf],["Employer ETF",x.employer_etf]],"Employer Cost",Number(x.employer_epf)+Number(x.employer_etf))+'</div></div>'+
       '<div class="sign"><div>Prepared / Checked by HR</div><div>Approved by Management</div></div>'+
@@ -1189,16 +1193,17 @@
       table(["Code","B/S","B/A","T/A","V/A","ORC","Incent.","Other All.","OT","Other","Gross"],earn,earnTotals)+
       '<p class="print-note">Amounts were entered as readable values from the handwritten source. Blank source entries must be verified: displayed zero does not confirm that a component is inapplicable.</p>');
     // Page 3: performance and statutory detail.
+    const fuelLitres=n=>esc(Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2}))+" L";
     const deductionsTable=rows.map(x=>[esc(emp(x)?.staff_code||"—"),
-      rawMoney(x.business_target),rawMoney(x.business_achieved),esc(pct(x)),
+      rawMoney(x.business_target),rawMoney(x.business_achieved),esc(pct(x)),fuelLitres(x.fuel_allowance_litres),
       moneySafe(x.employee_epf),moneySafe(x.income_tax),moneySafe(x.other_deductions),
       moneySafe(x.employer_epf),moneySafe(x.employer_etf)]);
-    const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",
+    const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",fuelLitres(sum(x=>x.fuel_allowance_litres)),
       moneySafe(sum(x=>x.employee_epf)),moneySafe(sum(x=>x.income_tax)),
       moneySafe(sum(x=>x.other_deductions)),moneySafe(sum(x=>x.employer_epf)),moneySafe(sum(x=>x.employer_etf))];
     const p3=page(3,"Performance & Statutory Items","Business target, achievement and payroll deductions",
-      table(["Code","Target","Achieved","%","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
-      '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
+      table(["Code","Target","Achieved","%","Fuel (L)","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
+      '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. Fuel (L) is a non-cash quantity excluded from Gross/Net. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
     // Page 4: reconcile all eight scan entries, including two unmatched people.
     let p4="";
     if(scans.length){
