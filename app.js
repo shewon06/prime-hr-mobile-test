@@ -1047,7 +1047,15 @@
       '.footer{border-top:1px solid #dce5de;margin-top:22px;padding-top:10px;font-size:10px;color:#69776d}.sign{display:flex;justify-content:space-between;gap:25px;margin-top:40px}.sign div{border-top:1px solid #99a99d;width:45%;padding-top:6px}'+
       '.toolbar{margin-bottom:20px}.toolbar button{background:#17543b;color:white;border:0;padding:10px 15px;border-radius:8px;cursor:pointer}.warning{color:#8d602a;font-size:11px;font-weight:700}'+
       '.sheet h1{font-size:20px}.sheet table{font-size:8px}.sheet th,.sheet td{padding:5px 4px}.sheet .num{white-space:nowrap}.sheet .name{max-width:130px;min-width:85px;overflow-wrap:anywhere}.sheet .meta{grid-template-columns:repeat(3,1fr)}'+
-      '@media print{.toolbar{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet tr{break-inside:avoid}thead{display:table-header-group}}'+
+      '.sheet .sheet-page{break-after:page;page-break-after:always;padding:0 0 4mm}.sheet .sheet-page:last-child{break-after:auto;page-break-after:auto}'+
+      '.sheet-page header{margin-bottom:11px}.sheet-page header .brand{font-size:25px}.sheet-page .print-head{text-align:right}.sheet-page .print-head h1{font-size:21px}'+
+      '.print-stats{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:10px;margin:12px 0}.print-stats div{background:#f2f7f2;border:1px solid #d8e7dc;padding:12px;border-radius:8px}'+
+      '.print-stats small{display:block;font-size:9px;letter-spacing:.07em;color:#6b8371}.print-stats strong{display:block;font-size:17px;color:#1a5e40;margin-top:5px}'+
+      '.sheet-page .a4-table{width:100%;table-layout:fixed;font-size:9px}.sheet-page .a4-table th,.sheet-page .a4-table td{padding:7px 5px;overflow-wrap:anywhere;line-height:1.4}'+
+      '.sheet-page .a4-table td small{display:block;font-size:8px;color:#718575;margin-top:4px}.sheet-page .a4-table th{background:#eaf3ed;color:#255e42}'+
+      '.sheet-page .a4-table td:first-child{font-weight:800}.sheet-page .a4-table th:nth-child(2),.sheet-page .a4-table td:nth-child(2){text-align:left}'+
+      '.print-note{margin-top:16px;color:#6d7e73;font-size:10px;line-height:1.6}.sheet-page .footer{margin-top:16px;font-size:9px}'+
+      '@media print{.toolbar{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet tr{break-inside:avoid}thead{display:table-header-group}.sheet-page{break-inside:avoid-page}}'+
       '</style>';
     const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><title>'+esc(title)+'</title>'+style+'</head><body>'+
       '<div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button> <span class="muted">Review all amounts before issuing.</span></div>'+body+'</body></html>';
