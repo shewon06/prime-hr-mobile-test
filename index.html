@@ -146,23 +146,46 @@
  <article class="panel"><div class="panel-head"><h3>Leave register</h3></div><div class="table-scroll"><table><thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Status</th><th>Reason</th><th>Action</th></tr></thead><tbody id="leave-rows"></tbody></table></div></article>
       </section>
       <section id="view-payroll" class="view hidden">
- <article class="panel"><div class="panel-head"><h3>Monthly Payroll — Draft & Approval</h3><span class="pill">HR / ADMIN</span></div>
- <p class="fineprint">Figures are manually entered/snapshotted. EPF, ETF, APIT and deductions must be checked against approved payroll rules. No automatic statutory calculations, payments or bank transfers.</p>
- <form id="payroll-form" class="form-grid">
- <div class="two"><label>Employee<select name="employee_id" id="payroll-employee" required></select></label><label>Salary Month<input name="period" id="payroll-month" type="month" required></label></div>
- <div class="two"><label>Basic Salary (LKR)<input name="basic_pay" type="number" min="0" step=".01" value="0" required></label><label>Allowances (LKR)<input name="allowance_pay" type="number" min="0" step=".01" value="0" required></label></div>
- <div class="two"><label>Overtime (LKR)<input name="overtime_pay" type="number" min="0" step=".01" value="0" required></label><label>Other Earnings (LKR)<input name="other_earnings" type="number" min="0" step=".01" value="0" required></label></div>
- <div class="two"><label>Employee EPF deduction (LKR)<input name="employee_epf" type="number" min="0" step=".01" value="0" required></label><label>APIT / Income Tax (LKR)<input name="income_tax" type="number" min="0" step=".01" value="0" required></label></div>
- <div class="two"><label>Other Deductions (LKR)<input name="other_deductions" type="number" min="0" step=".01" value="0" required></label><label>Employer EPF (Company Cost)<input name="employer_epf" type="number" min="0" step=".01" value="0" required></label></div>
- <label>Employer ETF (Company Cost)<input name="employer_etf" type="number" min="0" step=".01" value="0" required></label>
- <label>Internal Notes<textarea name="notes" maxlength="1000" rows="2"></textarea></label>
- <div id="payroll-live-summary" class="tip">Gross: Rs. 0 · Net: Rs. 0</div>
- <button class="btn primary" type="submit">Save / Update Draft Payroll</button>
- </form></article>
- <article class="panel"><div class="panel-head"><h3>Payroll Register</h3><button class="btn outline" type="button" id="payroll-export">Export Payroll CSV</button></div>
- <div class="toolbar"><label>Period<input id="payroll-period-filter" type="month"></label><label>Status<select id="payroll-status-filter"><option value="">All statuses</option><option value="draft">Draft</option><option value="approved">Approved</option><option value="paid">Paid</option></select></label></div>
- <div id="payroll-totals" class="tip"></div>
- <div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Gross LKR</th><th>Net LKR</th><th>Status</th><th>Action</th></tr></thead><tbody id="payroll-rows"></tbody></table></div>
+ <article class="panel payroll-panel">
+  <div class="panel-head"><div><h3>PRIME Monthly Payroll Studio</h3><p class="fineprint">Prepare, review and authorize payroll with a modern payslip and consolidated monthly paysheet.</p></div><span class="pill">HR / ADMIN ONLY</span></div>
+  <p class="payroll-warning">Payroll figures require HR verification. The uploaded handwritten sheet uses B/S, B/A, T/A, V/A and ORC codes: verify each item's company-approved meaning before issuing. EPF / ETF / APIT and sales incentives are <b>not</b> automatically inferred. No bank payments are made by this app.</p>
+  <form id="payroll-form" class="form-grid">
+   <div class="two"><label>Employee<select name="employee_id" id="payroll-employee" required></select></label><label>Salary Month<input name="period" id="payroll-month" type="month" required></label></div>
+   <div class="payroll-section-heading">01 · Monthly business performance</div>
+   <div class="two"><label>Sales / Business Target (LKR)<input name="business_target" type="number" min="0" step=".01" placeholder="Enter confirmed target"></label><label>Business Achievement (LKR)<input name="business_achieved" type="number" min="0" step=".01" placeholder="Enter confirmed achievement"></label></div>
+   <div class="payroll-performance-line"><span>Target achievement</span><strong id="payroll-achievement-percentage">—</strong><span id="payroll-achievement-context">Percentage is calculated only when target and achievement are entered.</span></div>
+   <div class="payroll-section-heading">02 · First-month salary / allowance calculator</div>
+   <div class="payroll-proration-box">
+    <div class="payroll-proration-header"><div><strong>Joining Date Salary Calculation</strong><p id="payroll-proration-info" class="fineprint">Select an employee to view first-month salary calculation.</p></div><span id="payroll-proration-badge" class="pill">Monthly</span></div>
+    <p class="fineprint">For a joining date during this payroll month, the suggested amount is Full Monthly Rate × eligible calendar days ÷ calendar days in the month (joining day included). Verify your approved company payroll policy. Do not reduce handwritten payable amounts a second time.</p>
+    <div class="two"><label>Full Monthly B/S — Reference (LKR)<input name="full_monthly_basic" type="number" min="0" step=".01" value="0"></label><label>Full Monthly B/A — Reference (LKR)<input name="full_monthly_ba" type="number" min="0" step=".01" value="0"></label></div>
+    <div class="two"><label>Full Monthly T/A — Reference (LKR)<input name="full_monthly_ta" type="number" min="0" step=".01" value="0"></label><label>Full Monthly V/A — Reference (LKR)<input name="full_monthly_va" type="number" min="0" step=".01" value="0"></label></div>
+    <div class="button-row"><button class="btn outline" id="payroll-proration-apply" type="button">Apply First-month / Monthly Rates</button><span class="fineprint">Fills payable B/S, B/A, T/A and V/A below. These amounts remain editable for HR adjustments.</span></div>
+    <input name="proration_method" type="hidden" value="none"><input name="proration_joining_date" type="hidden"><input name="proration_payable_days" type="hidden"><input name="proration_month_days" type="hidden">
+   </div>
+   <div class="payroll-section-heading">03 · Payable Earnings / Allowances</div>
+   <div class="two"><label>B/S · Basic Salary (LKR)<input name="basic_pay" type="number" min="0" step=".01" value="0" required></label><label>B/A · Additional Allowance (LKR)<input name="ba_pay" type="number" min="0" step=".01" value="0" required></label></div>
+   <div class="two"><label>T/A · Allowance (LKR)<input name="travel_allowance_pay" type="number" min="0" step=".01" value="0" required></label><label>V/A · Vehicle Allowance (LKR)<input name="vehicle_allowance_pay" type="number" min="0" step=".01" value="0" required></label></div>
+   <div class="two"><label>ORC · Commission (LKR)<input name="orc_pay" type="number" min="0" step=".01" value="0" required></label><label>Approved Incentive / Bonus (LKR)<input name="incentive_pay" type="number" min="0" step=".01" value="0" required></label></div>
+   <div class="two"><label>Other Allowances (LKR)<input name="allowance_pay" type="number" min="0" step=".01" value="0" required></label><label>Overtime (LKR)<input name="overtime_pay" type="number" min="0" step=".01" value="0" required></label></div>
+   <label>Other Earnings (LKR)<input name="other_earnings" type="number" min="0" step=".01" value="0" required></label>
+   <div class="payroll-section-heading">04 · Statutory &amp; other deductions</div>
+   <div class="two"><label>Employee EPF (LKR)<input name="employee_epf" type="number" min="0" step=".01" value="0" required></label><label>APIT / Income Tax (LKR)<input name="income_tax" type="number" min="0" step=".01" value="0" required></label></div>
+   <label>Other Deductions / Advances (LKR)<input name="other_deductions" type="number" min="0" step=".01" value="0" required></label>
+   <div class="payroll-section-heading">05 · Employer contribution (not deducted from net pay)</div>
+   <div class="two"><label>Employer EPF (LKR)<input name="employer_epf" type="number" min="0" step=".01" value="0" required></label><label>Employer ETF (LKR)<input name="employer_etf" type="number" min="0" step=".01" value="0" required></label></div>
+   <label>Internal Payroll Notes / Calculation Reference<textarea name="notes" maxlength="1000" rows="3" placeholder="Explain checked/corrected figures from the handwritten source."></textarea></label>
+   <div id="payroll-live-summary" class="payroll-live-summary" aria-live="polite">Gross: Rs. 0 · Deductions: Rs. 0 · Net: Rs. 0</div>
+   <button class="btn primary" type="submit">Save / Update Draft Payroll</button>
+  </form>
+ </article>
+ <article class="panel payroll-panel">
+  <div class="panel-head"><div><h3>Monthly Payroll Register &amp; Paysheets</h3><p class="fineprint">Draft → Admin Approved → Paid (payment must be confirmed externally).</p></div>
+    <div class="button-row"><button class="btn outline" type="button" id="payroll-export">Export Payroll CSV</button><button class="btn primary" type="button" id="payroll-sheet-print">Print Monthly Paysheet / Save PDF</button></div>
+  </div>
+  <div class="toolbar"><label>Salary Month<input id="payroll-period-filter" type="month"></label><label>Status<select id="payroll-status-filter"><option value="">All statuses</option><option value="draft">Draft</option><option value="approved">Approved</option><option value="paid">Paid</option></select></label></div>
+  <div id="payroll-totals" class="tip"></div>
+  <div class="table-scroll"><table><thead><tr><th>Employee</th><th>Period</th><th>Gross LKR</th><th>Net LKR</th><th>Status</th><th>Action</th></tr></thead><tbody id="payroll-rows"></tbody></table></div>
  </article>
 </section>
 <section id="view-recruitment" class="view hidden">
