@@ -1372,6 +1372,7 @@
     $("payroll-period-filter").addEventListener("change",renderPayroll);
     $("payroll-status-filter").addEventListener("change",renderPayroll);
     $("payroll-export").addEventListener("click",exportPayroll);
+    $("payroll-sheet-print").addEventListener("click",printMonthlyPaysheet);
     $("entitlement-form").addEventListener("submit",saveEntitlement);
     $("balance-year").addEventListener("change",renderLeaveBalances);
     $("leave-balance-export").addEventListener("click",exportLeaveBalances);
