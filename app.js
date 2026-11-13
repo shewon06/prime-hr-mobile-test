@@ -832,7 +832,8 @@
     const f=$("payroll-form"),e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
     const c=payrollJoinContext(e,formValue(f,"period"));
     const badge=$("payroll-proration-badge"),note=$("payroll-proration-info"),button=$("payroll-proration-apply");
-    button.disabled=!e||c.future;
+    const existing=e&&state.payroll.find(x=>x.employee_id===e.id&&x.period_month.slice(0,7)===formValue(f,"period"));
+    button.disabled=!e||c.future||(existing&&existing.status!=="draft");
     const method=formValue(f,"proration_method");
     if(!e){badge.textContent="Select employee";note.textContent="Select an employee and salary month.";return}
     if(c.future){badge.textContent="Not joined";note.textContent="Joining Date "+c.joined+" is after this payroll month. Payroll cannot be saved.";return}
@@ -943,6 +944,20 @@
       if(!Number.isFinite(Number(raw))||Number(raw)<0)return toast("Check non-negative amount: "+key,true);
       values[key]=Math.round(Number(raw)*100)/100;
     }
+    const employee=state.employees.find(e=>e.id===employee_id);
+    const join=payrollJoinContext(employee,month);
+    if(join.future)return toast("Payroll month is before the employee's Joining Date.",true);
+    for(const [reference] of monthlySalaryReferences){
+      const raw=formValue(f,reference);
+      if(raw===""){values[reference]=null;continue}
+      if(!Number.isFinite(Number(raw))||Number(raw)<0)return toast("Check full monthly rate: "+reference,true);
+      values[reference]=payrollRounded(raw);
+    }
+    values.proration_method=join.partial?
+      (formValue(f,"proration_method")==="calendar"?"calendar":"manual"):"none";
+    values.proration_joining_date=join.available?join.joined:null;
+    values.proration_payable_days=join.available?join.payableDays:null;
+    values.proration_month_days=join.available?join.monthDays:null;
     const gross=payrollSum(values,payrollEarningKeys);
     const deductions=payrollSum(values,payrollDeductionKeys);
     if(deductions>gross)return toast("Deductions cannot exceed gross earnings.",true);
@@ -1446,6 +1461,8 @@
     $("field-export").addEventListener("click",exportFieldReports);
     $("payroll-form").addEventListener("submit",savePayroll);
     $("payroll-form").addEventListener("input",payrollFormTotals);
+    $("payroll-form").addEventListener("input",payrollMarkManualOverride);
+    $("payroll-proration-apply").addEventListener("click",payrollApplyMonthlyReferences);
     $("payroll-employee").addEventListener("change",fillPayrollFromMaster);
     $("payroll-month").addEventListener("change",fillPayrollFromMaster);
     $("payroll-period-filter").addEventListener("change",renderPayroll);
