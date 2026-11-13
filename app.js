@@ -1094,6 +1094,10 @@
       '<div><span class="eyebrow">Achievement</span><strong>'+esc(x.business_achieved==null?"Not entered":money(x.business_achieved))+'</strong></div>'+
       '<div><span class="eyebrow">Achievement %</span><strong>'+esc(p)+'</strong></div>'+
       '</div>'+(percent===null?'':'<div class="bar"><i style="width:'+Math.min(100,Math.max(0,percent))+'%"></i></div>');
+    const fuelSection='<h2>IN-KIND ALLOWANCE · NON-CASH</h2><div class="meta">'+
+      '<div><span class="eyebrow">Fuel Allowance</span><strong>'+
+      esc(Number(x.fuel_allowance_litres||0).toLocaleString("en-US",{maximumFractionDigits:2})+" L")+
+      '</strong></div><div><span class="eyebrow">Payroll treatment</span><strong>Litres only · Excluded from Gross / Net Pay</strong></div></div>';
     const gross=Number(x.gross_pay),deductions=payrollSum(x,payrollDeductionKeys);
     const hasProration=Number(x.proration_payable_days)>0&&Number(x.proration_month_days)>0&&
       x.proration_joining_date&&x.proration_method!=="none";
@@ -1114,7 +1118,7 @@
       '<div class="meta">'+meta.map(([a,b])=>'<div><span class="eyebrow">'+esc(a)+'</span><strong>'+esc(b)+'</strong></div>').join("")+'</div>'+
       '<div class="hero"><div><small>NET PAY FOR PERIOD</small><strong>'+esc(money(x.net_pay))+'</strong></div><div>'+esc(formatPayrollPeriod(x.period_month))+'</div></div>'+
       (x.status!=="paid"?'<p class="warning">'+esc(statusNote)+'</p>':'<p class="muted">'+esc(statusNote)+'</p>')+
-      performance+prorated+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
+      performance+prorated+fuelSection+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
       '<div><h2>DEDUCTIONS</h2>'+table(deduct,"Total Deductions",deductions)+
       '<h2>EMPLOYER CONTRIBUTIONS (NOT DEDUCTED)</h2>'+table([["Employer EPF",x.employer_epf],["Employer ETF",x.employer_etf]],"Employer Cost",Number(x.employer_epf)+Number(x.employer_etf))+'</div></div>'+
       '<div class="sign"><div>Prepared / Checked by HR</div><div>Approved by Management</div></div>'+
