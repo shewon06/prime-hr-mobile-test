@@ -1193,16 +1193,17 @@
       table(["Code","B/S","B/A","T/A","V/A","ORC","Incent.","Other All.","OT","Other","Gross"],earn,earnTotals)+
       '<p class="print-note">Amounts were entered as readable values from the handwritten source. Blank source entries must be verified: displayed zero does not confirm that a component is inapplicable.</p>');
     // Page 3: performance and statutory detail.
+    const fuelLitres=n=>esc(Number(n||0).toLocaleString("en-US",{maximumFractionDigits:2}))+" L";
     const deductionsTable=rows.map(x=>[esc(emp(x)?.staff_code||"—"),
-      rawMoney(x.business_target),rawMoney(x.business_achieved),esc(pct(x)),
+      rawMoney(x.business_target),rawMoney(x.business_achieved),esc(pct(x)),fuelLitres(x.fuel_allowance_litres),
       moneySafe(x.employee_epf),moneySafe(x.income_tax),moneySafe(x.other_deductions),
       moneySafe(x.employer_epf),moneySafe(x.employer_etf)]);
-    const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",
+    const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",fuelLitres(sum(x=>x.fuel_allowance_litres)),
       moneySafe(sum(x=>x.employee_epf)),moneySafe(sum(x=>x.income_tax)),
       moneySafe(sum(x=>x.other_deductions)),moneySafe(sum(x=>x.employer_epf)),moneySafe(sum(x=>x.employer_etf))];
     const p3=page(3,"Performance & Statutory Items","Business target, achievement and payroll deductions",
-      table(["Code","Target","Achieved","%","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
-      '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
+      table(["Code","Target","Achieved","%","Fuel (L)","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
+      '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. Fuel (L) is a non-cash quantity excluded from Gross/Net. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
     // Page 4: reconcile all eight scan entries, including two unmatched people.
     let p4="";
     if(scans.length){
