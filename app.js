@@ -1062,7 +1062,7 @@
       '; verified monthly reference: '+esc(money(sourceFull))+'.</p>';
     const content=head+'<div class="eyebrow">Prepared for</div><h1>'+esc(e?.full_name||"Employee")+'</h1>'+
       '<div class="meta">'+meta.map(([a,b])=>'<div><span class="eyebrow">'+esc(a)+'</span><strong>'+esc(b)+'</strong></div>').join("")+'</div>'+
-      '<div class="hero"><div><small>NET MONTHLY PAY</small><strong>'+esc(money(x.net_pay))+'</strong></div><div>'+esc(formatPayrollPeriod(x.period_month))+'</div></div>'+
+      '<div class="hero"><div><small>NET PAY FOR PERIOD</small><strong>'+esc(money(x.net_pay))+'</strong></div><div>'+esc(formatPayrollPeriod(x.period_month))+'</div></div>'+
       (x.status!=="paid"?'<p class="warning">'+esc(statusNote)+'</p>':'<p class="muted">'+esc(statusNote)+'</p>')+
       performance+prorated+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
       '<div><h2>DEDUCTIONS</h2>'+table(deduct,"Total Deductions",deductions)+
@@ -1118,8 +1118,37 @@
       num(sum(x=>Number(x.gross_pay))),num(sum(deduct)),num(sum(x=>Number(x.net_pay))),"—"
     ];
     const footer='<tfoot><tr>'+totalCells.map((c,i)=>'<td'+(i>=2&&i<=15?' class="num"':'')+'>'+c+'</td>').join("")+'</tr></tfoot>';
+    const extraColumns=["Code","Employee EPF","APIT / Tax","Other Deductions","Total Deductions","Employer EPF","Employer ETF","Employer Total"];
+    const extraRows=rows.map(x=>{
+      const e=state.employees.find(e=>e.id===x.employee_id);
+      const cells=[
+        esc(e?.staff_code||"—"),num(x.employee_epf),num(x.income_tax),num(x.other_deductions),
+        num(deduct(x)),num(x.employer_epf),num(x.employer_etf),
+        num(Number(x.employer_epf)+Number(x.employer_etf))
+      ];
+      return '<tr>'+cells.map((v,i)=>'<td'+(i?' class="num"':'')+'>'+v+'</td>').join("")+'</tr>';
+    }).join("");
+    const extraTotals=["TOTAL",num(sum(x=>Number(x.employee_epf))),num(sum(x=>Number(x.income_tax))),
+      num(sum(x=>Number(x.other_deductions))),num(sum(deduct)),
+      num(sum(x=>Number(x.employer_epf))),num(sum(x=>Number(x.employer_etf))),
+      num(sum(x=>Number(x.employer_epf)+Number(x.employer_etf)))];
+    const extra='<h2>STATUTORY DEDUCTIONS &amp; EMPLOYER CONTRIBUTIONS</h2><table><thead><tr>'+
+      extraColumns.map((label,i)=>'<th'+(i?' class="num"':'')+'>'+esc(label)+'</th>').join("")+
+      '</tr></thead><tbody>'+extraRows+'</tbody><tfoot><tr>'+extraTotals.map((v,i)=>'<td'+(i?' class="num"':'')+'>'+v+'</td>').join("")+'</tr></tfoot></table>';
+    const proratedRows=rows.filter(x=>x.proration_method!=="none"&&x.proration_joining_date);
+    const proratedDetail=proratedRows.length?'<h2>FIRST-MONTH SALARY RECONCILIATION</h2><table><thead><tr>'+
+      ["Staff","Joining Date","Days Paid / Month","Full Monthly B/S","Payable B/S","Full B/A","Full T/A","Full V/A","Method"].map(v=>'<th>'+esc(v)+'</th>').join("")+
+      '</tr></thead><tbody>'+proratedRows.map(x=>{
+        const e=state.employees.find(e=>e.id===x.employee_id);
+        const cells=[e?.staff_code||"—",x.proration_joining_date,
+          String(x.proration_payable_days||"—")+"/"+String(x.proration_month_days||"—"),
+          money(x.full_monthly_basic),money(x.basic_pay),money(x.full_monthly_ba),
+          money(x.full_monthly_ta),money(x.full_monthly_va),x.proration_method];
+        return '<tr>'+cells.map(v=>'<td>'+esc(v)+'</td>').join("")+'</tr>';
+      }).join("")+'</tbody></table>':'';
     const body='<div class="sheet">'+heading+info+'<table>'+header+'<tbody>'+lines+'</tbody>'+footer+'</table>'+
-      '<div class="footer">Other + OT = Other Allowances + Overtime + Other Earnings. Earnings and commission categories require verified HR inputs. Target / Achievement are performance data, not automatically payable commission. Deductions include Employee EPF, APIT and Other Deductions. Employer EPF/ETF are separate company costs. No transfer initiated.</div>'+
+      extra+proratedDetail+
+      '<div class="footer">Other + OT = Other Allowances + Overtime + Other Earnings. Earnings and commission categories require verified HR inputs. Target / Achievement are performance data, not automatically payable commission. EPF, ETF and APIT amounts are entered/verified manually. Calendar-day pro-rata is a suggested first-month calculation; HR-approved figures override it. No payment transfer initiated.</div>'+
       '<div class="sign"><div>Prepared & verified by HR</div><div>Approved by Management</div></div></div>';
     openPayrollPrint("PRIME Monthly Paysheet "+period,body,true);
   }
