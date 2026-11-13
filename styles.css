@@ -84,3 +84,10 @@ input,select,textarea{background:#fff;width:100%;border:1px solid #dae6df;border
  #view-payroll .payroll-live-summary>div.net{grid-column:1/-1}
  #view-payroll .payroll-live-summary strong{font-size:16px}
 }
+
+#view-payroll .payroll-proration-box{border:1px solid #d0e0d4;background:linear-gradient(130deg,#f4f9f5,#fffefa);border-radius:14px;padding:17px;display:grid;gap:14px}
+#view-payroll .payroll-proration-header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+#view-payroll .payroll-proration-header strong{font-size:15px;color:#195239}
+#view-payroll .payroll-proration-header p{margin:8px 0 0;line-height:1.6}
+#view-payroll .payroll-proration-box>p{margin:0;line-height:1.65}
+#view-payroll .payroll-proration-box .button-row span{flex:1;min-width:220px}
