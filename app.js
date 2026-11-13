@@ -807,26 +807,105 @@
       '<div class="net"><small>NET PAY</small><strong>'+esc(money(net))+'</strong></div>'+
       '<p>Employer EPF / ETF company cost: '+esc(money(company))+(net<0?' · Check deductions':'')+'</p>';
   }
+  const monthlySalaryReferences=[
+    ["full_monthly_basic","basic_pay"],["full_monthly_ba","ba_pay"],
+    ["full_monthly_ta","travel_allowance_pay"],["full_monthly_va","vehicle_allowance_pay"]
+  ];
+  function payrollJoinContext(employee,period){
+    if(!employee||!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(period||"")))
+      return {available:false,partial:false,ratio:1};
+    const joined=String(employee.joined_on||"").slice(0,10);
+    const lastDay=new Date(Date.UTC(Number(period.slice(0,4)),Number(period.slice(5,7)),0)).getUTCDate();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(joined))
+      return {available:false,partial:false,ratio:1,monthDays:lastDay};
+    const joinedMonth=joined.slice(0,7);
+    const day=Number(joined.slice(8,10));
+    if(day<1||day>31)return {available:false,partial:false,ratio:1,monthDays:lastDay};
+    const future=joinedMonth>period;
+    const partial=joinedMonth===period&&day>1;
+    const payable=partial?lastDay-day+1:lastDay;
+    return {available:true,joined,period,monthDays:lastDay,payableDays:payable,
+      partial,future,ratio:partial?payable/lastDay:future?0:1};
+  }
+  const payrollRounded=n=>Math.round((Number(n||0)+Number.EPSILON)*100)/100;
+  function payrollProrationDisplay(){
+    const f=$("payroll-form"),e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
+    const c=payrollJoinContext(e,formValue(f,"period"));
+    const badge=$("payroll-proration-badge"),note=$("payroll-proration-info"),button=$("payroll-proration-apply");
+    button.disabled=!e||c.future;
+    const method=formValue(f,"proration_method");
+    if(!e){badge.textContent="Select employee";note.textContent="Select an employee and salary month.";return}
+    if(c.future){badge.textContent="Not joined";note.textContent="Joining Date "+c.joined+" is after this payroll month. Payroll cannot be saved.";return}
+    if(!c.available){badge.textContent="Manual review";note.textContent="Joining Date is missing. Verify dates, full monthly rates and payable amounts before saving.";return}
+    if(c.partial){
+      badge.textContent=method==="manual"?"Manual amount":method==="calendar"?"First-month pro-rata":"Review pro-rata";
+      note.textContent="Joined "+c.joined+" · Payable "+c.payableDays+" / "+c.monthDays+
+        " calendar days ("+(c.ratio*100).toFixed(1)+"%). Calculation is a proposal until HR verifies company policy.";
+    }else{
+      badge.textContent="Full month";
+      note.textContent="Joined "+c.joined+" · Full monthly rate applies for "+formValue(f,"period")+
+        ". Re-enter full monthly amounts or manually adjust payable figures as approved.";
+    }
+  }
+  function payrollApplyMonthlyReferences(){
+    const f=$("payroll-form"),e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
+    if(!e)return;
+    const c=payrollJoinContext(e,formValue(f,"period"));
+    if(c.future)return toast("Payroll month is before this employee's Joining Date.",true);
+    for(const [reference,payable] of monthlySalaryReferences){
+      const rate=Number(formValue(f,reference)||0);
+      if(!Number.isFinite(rate)||rate<0)return toast("Invalid full monthly amount: "+reference,true);
+      setFormValue(f,payable,payrollRounded(rate*c.ratio).toFixed(2));
+    }
+    setFormValue(f,"proration_method",c.partial?"calendar":"none");
+    setFormValue(f,"proration_joining_date",c.available?c.joined:"");
+    setFormValue(f,"proration_payable_days",c.available?c.payableDays:"");
+    setFormValue(f,"proration_month_days",c.available?c.monthDays:"");
+    payrollFormTotals();
+    payrollProrationDisplay();
+  }
+  function payrollMarkManualOverride(ev){
+    if(!monthlySalaryReferences.some(([reference,payable])=>ev.target.name===payable))return;
+    const f=$("payroll-form"),e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
+    const c=payrollJoinContext(e,formValue(f,"period"));
+    if(c.partial){setFormValue(f,"proration_method","manual");payrollProrationDisplay()}
+  }
   function fillPayrollFromMaster(){
     const f=$("payroll-form");
     const e=state.employees.find(x=>x.id===formValue(f,"employee_id"));
-    if(!e)return;
+    if(!e){payrollProrationDisplay();return}
     const month=formValue(f,"period");
     const existing=state.payroll.find(x=>x.employee_id===e.id&&x.period_month.slice(0,7)===month);
     if(existing){
       for(const key of payrollKeys)setFormValue(f,key,Number(existing[key]??0));
       for(const key of ["business_target","business_achieved"])setFormValue(f,key,existing[key]??"");
+      for(const [reference,payable] of monthlySalaryReferences){
+        const masterFallback=reference==="full_monthly_basic"?e.basic_salary:
+          reference==="full_monthly_va"?e.vehicle_allowance:null;
+        setFormValue(f,reference,existing[reference]??masterFallback??existing[payable]??0);
+      }
+      for(const key of ["proration_method","proration_joining_date","proration_payable_days","proration_month_days"])
+        setFormValue(f,key,existing[key]??(key==="proration_method"?"none":""));
       setFormValue(f,"notes",existing.notes||"");
-      $("payroll-form").querySelector('button[type="submit"]').disabled=existing.status!=="draft";
-      $("payroll-form").querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
+      f.querySelector('button[type="submit"]').disabled=existing.status!=="draft";
+      f.querySelector('button[type="submit"]').textContent=existing.status==="draft"?"Update Draft Payroll":"Payroll Locked — "+existing.status;
+      $("payroll-proration-apply").disabled=existing.status!=="draft";
     }else{
       f.querySelector('button[type="submit"]').disabled=false;
       f.querySelector('button[type="submit"]').textContent="Save / Update Draft Payroll";
-      payrollKeys.forEach(k=>setFormValue(f,k,k==="basic_pay"?Number(e.basic_salary||0):k==="vehicle_allowance_pay"?Number(e.vehicle_allowance||0):0));
+      payrollKeys.forEach(k=>setFormValue(f,k,0));
       setFormValue(f,"business_target","");setFormValue(f,"business_achieved","");
+      for(const [reference,payable] of monthlySalaryReferences){
+        const value=reference==="full_monthly_basic"?e.basic_salary:
+          reference==="full_monthly_va"?e.vehicle_allowance:0;
+        setFormValue(f,reference,Number(value||0));
+      }
       setFormValue(f,"notes","");
+      $("payroll-proration-apply").disabled=false;
+      payrollApplyMonthlyReferences(); // First-month auto-proposal; users may adjust.
     }
     payrollFormTotals();
+    payrollProrationDisplay();
   }
   function filteredPayroll(){
     const m=$("payroll-period-filter").value,status=$("payroll-status-filter").value;
