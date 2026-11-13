@@ -108,7 +108,7 @@
         .select("id,employee_id,staff_group,activity_type,location_name,notes,latitude,longitude,accuracy_m,created_at")
         .order("created_at",{ascending:false}).limit(1500));
       if(isHR()){
-       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
+       all.push(state.client.from("hr_payroll_entries").select("id,employee_id,period_month,basic_pay,allowance_pay,overtime_pay,other_earnings,employee_epf,income_tax,other_deductions,employer_epf,employer_etf,business_target,business_achieved,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,incentive_pay,full_monthly_basic,full_monthly_ba,full_monthly_ta,full_monthly_va,proration_method,proration_joining_date,proration_payable_days,proration_month_days,fuel_allowance_litres,gross_pay,net_pay,status,source_review_required,source_reference,notes,approved_at,paid_at,created_at").order("period_month",{ascending:false}).limit(1200));
        all.push(state.client.from("prime_payroll_scan_entries")
         .select("id,source_id,period_month,source_page,source_number,source_name,employee_id,source_designation,source_joined_on,business_target,business_achieved,basic_pay,ba_pay,travel_allowance_pay,vehicle_allowance_pay,orc_pay,source_notes,review_required")
         .order("source_id").limit(100));
@@ -784,7 +784,7 @@
       el.dataset.staffList=keys;
     }
   }
-  const payrollKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
+  const payrollKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","fuel_allowance_litres","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings","employee_epf","income_tax","other_deductions","employer_epf","employer_etf"];
   const payrollEarningKeys=["basic_pay","ba_pay","travel_allowance_pay","vehicle_allowance_pay","orc_pay","incentive_pay","allowance_pay","overtime_pay","other_earnings"];
   const payrollDeductionKeys=["employee_epf","income_tax","other_deductions"];
   const payrollSum=(record,keys)=>keys.reduce((sum,key)=>sum+Number(record?.[key]||0),0);
