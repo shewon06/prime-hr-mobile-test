@@ -1045,11 +1045,26 @@
       '<div><span class="eyebrow">Achievement %</span><strong>'+esc(p)+'</strong></div>'+
       '</div>'+(percent===null?'':'<div class="bar"><i style="width:'+Math.min(100,Math.max(0,percent))+'%"></i></div>');
     const gross=Number(x.gross_pay),deductions=payrollSum(x,payrollDeductionKeys);
+    const hasProration=Number(x.proration_payable_days)>0&&Number(x.proration_month_days)>0&&
+      x.proration_joining_date&&x.proration_method!=="none";
+    const sourceFull=x.full_monthly_basic==null?(e?.basic_salary??x.basic_pay):x.full_monthly_basic;
+    const prorated=hasProration?
+      '<h2>FIRST-MONTH PAY / JOINING DATE ADJUSTMENT</h2><div class="meta">'+
+      '<div><span class="eyebrow">Joining Date</span><strong>'+esc(x.proration_joining_date)+'</strong></div>'+
+      '<div><span class="eyebrow">Eligible Calendar Days</span><strong>'+
+        esc(x.proration_payable_days)+" / "+esc(x.proration_month_days)+'</strong></div>'+
+      '<div><span class="eyebrow">Full Monthly B/S Reference</span><strong>'+esc(money(sourceFull))+'</strong></div>'+
+      '<div><span class="eyebrow">Payable B/S</span><strong>'+esc(money(x.basic_pay))+'</strong></div>'+
+      '</div><p class="muted">Method: '+(x.proration_method==="calendar"?
+        "Suggested calendar-day pro-rata, HR verified before approval.":
+        "Manually adjusted by HR; do not apply pro-rata again.")+'</p>':
+      '<p class="muted">B/S reflects '+esc(x.proration_method==="none"?"full or manually entered monthly pay":"HR-reviewed payroll")+
+      '; verified monthly reference: '+esc(money(sourceFull))+'.</p>';
     const content=head+'<div class="eyebrow">Prepared for</div><h1>'+esc(e?.full_name||"Employee")+'</h1>'+
       '<div class="meta">'+meta.map(([a,b])=>'<div><span class="eyebrow">'+esc(a)+'</span><strong>'+esc(b)+'</strong></div>').join("")+'</div>'+
       '<div class="hero"><div><small>NET MONTHLY PAY</small><strong>'+esc(money(x.net_pay))+'</strong></div><div>'+esc(formatPayrollPeriod(x.period_month))+'</div></div>'+
       (x.status!=="paid"?'<p class="warning">'+esc(statusNote)+'</p>':'<p class="muted">'+esc(statusNote)+'</p>')+
-      performance+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
+      performance+prorated+'<div class="two"><div><h2>EARNINGS</h2>'+table(earn,"Gross Earnings",gross)+'</div>'+
       '<div><h2>DEDUCTIONS</h2>'+table(deduct,"Total Deductions",deductions)+
       '<h2>EMPLOYER CONTRIBUTIONS (NOT DEDUCTED)</h2>'+table([["Employer EPF",x.employer_epf],["Employer ETF",x.employer_etf]],"Employer Cost",Number(x.employer_epf)+Number(x.employer_etf))+'</div></div>'+
       '<div class="sign"><div>Prepared / Checked by HR</div><div>Approved by Management</div></div>'+
@@ -1080,29 +1095,29 @@
       '<p class="'+(prelim?'warning':'muted')+'">'+
       (prelim?'DRAFT/UNAPPROVED RECORDS INCLUDED — NOT PAYMENT INSTRUCTIONS.':'ADMIN PAYROLL REGISTER — Verify external payments independently.')+
       '</p>';
-    const labels=["Code","Employee / Branch","Target","Achieved","%","B/S","B/A","T/A","V/A","ORC","Incent.","Other + OT","Gross","Deductions","Net","Status"];
-    const header='<thead><tr>'+labels.map((s,i)=>'<th'+(i>=2&&i<=14?' class="num"':'')+'>'+esc(s)+'</th>').join("")+'</tr></thead>';
+    const labels=["Code","Employee / Branch","Target","Achieved","%","Full B/S","Paid B/S","B/A","T/A","V/A","ORC","Incent.","Other + OT","Gross","Deductions","Net","Status"];
+    const header='<thead><tr>'+labels.map((s,i)=>'<th'+(i>=2&&i<=15?' class="num"':'')+'>'+esc(s)+'</th>').join("")+'</tr></thead>';
     const lines=rows.map(x=>{
       const e=state.employees.find(e=>e.id===x.employee_id);
       const cells=[
-        e?.staff_code||"—",'<b>'+esc(e?.full_name||"Employee")+'</b><br><span class="muted">'+esc(branchName(e?.branch_id))+'</span>',
+        e?.staff_code||"—",'<b>'+esc(e?.full_name||"Employee")+'</b><br><span class="muted">'+esc(branchName(e?.branch_id))+'</span>'+((x.proration_payable_days&&x.proration_month_days&&x.proration_method!=="none")?'<br><span class="muted">Joined '+esc(x.proration_joining_date||e?.joined_on||"—")+' · '+esc(x.proration_payable_days)+'/'+esc(x.proration_month_days)+' days '+esc(x.proration_method)+'</span>':''),
         x.business_target==null?"—":num(x.business_target),
         x.business_achieved==null?"—":num(x.business_achieved),
-        esc(percent(x)),num(x.basic_pay),num(x.ba_pay),num(x.travel_allowance_pay),
+        esc(percent(x)),x.full_monthly_basic==null?"—":num(x.full_monthly_basic),num(x.basic_pay),num(x.ba_pay),num(x.travel_allowance_pay),
         num(x.vehicle_allowance_pay),num(x.orc_pay),num(x.incentive_pay),
         num(more(x)),num(x.gross_pay),num(deduct(x)),num(x.net_pay),esc(x.status.toUpperCase())
       ];
-      return '<tr>'+cells.map((value,i)=>'<td class="'+(i===1?'name':i>=2&&i<=14?'num':'')+'">'+value+'</td>').join("")+'</tr>';
+      return '<tr>'+cells.map((value,i)=>'<td class="'+(i===1?'name':i>=2&&i<=15?'num':'')+'">'+value+'</td>').join("")+'</tr>';
     }).join("");
     const totalCells=[
       "TOTAL",rows.length+" staff",
       num(sum(x=>Number(x.business_target||0))),num(sum(x=>Number(x.business_achieved||0))),
-      "—",num(sum(x=>Number(x.basic_pay))),num(sum(x=>Number(x.ba_pay))),
+      "—",num(sum(x=>Number(x.full_monthly_basic||0))),num(sum(x=>Number(x.basic_pay))),num(sum(x=>Number(x.ba_pay))),
       num(sum(x=>Number(x.travel_allowance_pay))),num(sum(x=>Number(x.vehicle_allowance_pay))),
       num(sum(x=>Number(x.orc_pay))),num(sum(x=>Number(x.incentive_pay))),num(sum(more)),
       num(sum(x=>Number(x.gross_pay))),num(sum(deduct)),num(sum(x=>Number(x.net_pay))),"—"
     ];
-    const footer='<tfoot><tr>'+totalCells.map((c,i)=>'<td'+(i>=2&&i<=14?' class="num"':'')+'>'+c+'</td>').join("")+'</tr></tfoot>';
+    const footer='<tfoot><tr>'+totalCells.map((c,i)=>'<td'+(i>=2&&i<=15?' class="num"':'')+'>'+c+'</td>').join("")+'</tr></tfoot>';
     const body='<div class="sheet">'+heading+info+'<table>'+header+'<tbody>'+lines+'</tbody>'+footer+'</table>'+
       '<div class="footer">Other + OT = Other Allowances + Overtime + Other Earnings. Earnings and commission categories require verified HR inputs. Target / Achievement are performance data, not automatically payable commission. Deductions include Employee EPF, APIT and Other Deductions. Employer EPF/ETF are separate company costs. No transfer initiated.</div>'+
       '<div class="sign"><div>Prepared & verified by HR</div><div>Approved by Management</div></div></div>';
@@ -1111,7 +1126,7 @@
   function exportPayroll(){
     if(!isHR())return;
     const keys=["staff_code","employee","branch","period_month","business_target","business_achieved","achievement_percent",
-      ...payrollKeys,"gross_pay","net_pay","status","notes"];
+      ...payrollKeys,"full_monthly_basic","full_monthly_ba","full_monthly_ta","full_monthly_va","proration_method","proration_joining_date","proration_payable_days","proration_month_days","gross_pay","net_pay","status","notes"];
     const rows=filteredPayroll().map(x=>{
       const e=state.employees.find(e=>e.id===x.employee_id);
       return {...x,staff_code:e?.staff_code||"",employee:employeeName(x.employee_id),
