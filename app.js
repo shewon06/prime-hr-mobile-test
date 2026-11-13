@@ -1196,7 +1196,7 @@
     const totals3=["TOTAL",moneySafe(sum(x=>x.business_target)),moneySafe(sum(x=>x.business_achieved)),"—",
       moneySafe(sum(x=>x.employee_epf)),moneySafe(sum(x=>x.income_tax)),
       moneySafe(sum(x=>x.other_deductions)),moneySafe(sum(x=>x.employer_epf)),moneySafe(sum(x=>x.employer_etf))];
-    const p3=page(3,"Performance &amp; Statutory Items","Business target, achievement and payroll deductions",
+    const p3=page(3,"Performance & Statutory Items","Business target, achievement and payroll deductions",
       table(["Code","Target","Achieved","%","EPF Emp.","APIT","Other Ded.","EPF Co.","ETF Co."],deductionsTable,totals3)+
       '<p class="print-note">Target/Achievement data are performance indicators, not automatically payable commission. EPF, ETF and APIT require independent payroll-rule verification; employer costs are not employee deductions.</p>');
     // Page 4: reconcile all eight scan entries, including two unmatched people.
